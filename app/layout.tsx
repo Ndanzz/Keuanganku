@@ -6,6 +6,8 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
   title: 'Keuanganku - Personal Finance Tracker',
   description: 'Kelola keuangan secara modern dari mana saja',
+  manifest: '/manifest.json',
+  themeColor: '#4f46e5',
 };
 
 export default function RootLayout({
