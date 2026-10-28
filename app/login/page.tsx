@@ -39,10 +39,10 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans text-slate-800">
       <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">VibeFinance</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Keuanganku</h1>
           <p className="text-xs text-slate-500 mt-1">
             {isLogin ? 'Masuk ke akun kamu' : 'Buat akun baru'}
           </p>

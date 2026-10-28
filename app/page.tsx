@@ -47,7 +47,7 @@ export default function PersonalFinanceApp() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('Keuanganku');
+  const [amount, setAmount] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [category, setCategory] = useState('');
 
@@ -208,7 +208,7 @@ export default function PersonalFinanceApp() {
         {/* Header dengan Info User & Logout */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">VibeFinance</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Keuanganku</h1>
             <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
               <User size={14} /> {userEmail || 'Memuat...'}
             </p>
