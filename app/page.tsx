@@ -47,7 +47,7 @@ export default function PersonalFinanceApp() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState('Keuanganku');
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [category, setCategory] = useState('');
 
