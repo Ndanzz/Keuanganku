@@ -41,7 +41,7 @@ export default function Home() {
   }
 
   return (
-    <main className="p-4 max-w-4xl mx-auto space-y-6">
+    <main className="p-4 max-w-4xl mx-auto space-y-6 min-h-screen bg-gray-50 text-gray-900">
       {/* Header Aplikasi */}
       <header className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         <div>
