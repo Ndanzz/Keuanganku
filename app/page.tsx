@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AccountSection from '@/lib/components/AccountSection';
-import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar, Target, PlusSquare, BarChart2 } from 'lucide-react';
+import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar, Target, PlusSquare, PieChart as PieChartIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 export default function DashboardPage() {
   const [session, setSession] = useState<any>(null);
@@ -194,7 +194,6 @@ export default function DashboardPage() {
     ? transactions.filter((tx) => tx.date && tx.date.startsWith(selectedMonth))
     : transactions;
 
-  // Hitung total keseluruhan pemasukan dan pengeluaran untuk grafik ringkasan
   const totalIncome = filteredTransactions
     .filter((tx) => tx.type === 'income')
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
@@ -203,10 +202,12 @@ export default function DashboardPage() {
     .filter((tx) => tx.type === 'expense')
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-  const summaryChartData = [
-    { name: 'Pemasukan', amount: totalIncome, fill: '#10b981' },
-    { name: 'Pengeluaran', amount: totalExpense, fill: '#f43f5e' },
+  const pieChartData = [
+    { name: 'Pemasukan', value: totalIncome },
+    { name: 'Pengeluaran', value: totalExpense },
   ];
+
+  const COLORS = ['#10b981', '#f43f5e'];
 
   if (!session) return null;
 
@@ -248,13 +249,10 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-400 italic">Belum ada data pengeluaran</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={transactions.filter(t => t.type === 'expense')}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="category" fontSize={10} />
-                      <YAxis fontSize={10} />
-                      <Tooltip />
-                      <Bar dataKey="amount" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                    </BarChart>
+                    <PieChart>
+                      <Tooltip formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Nominal']} />
+                      <Legend />
+                    </PieChart>
                   </ResponsiveContainer>
                 )}
               </div>
@@ -486,24 +484,40 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Grafik Keseluruhan Pemasukan vs Pengeluaran */}
+            {/* Grafik Lingkaran (Pie Chart) Rasio Keuangan */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 text-indigo-600" /> Ringkasan Keuangan
+                  <PieChartIcon className="w-4 h-4 text-indigo-600" /> Rasio Keuangan
                 </h3>
-                <span className="text-[10px] text-gray-400">Total Pemasukan vs Pengeluaran</span>
+                <span className="text-[10px] text-gray-400">Pemasukan vs Pengeluaran</span>
               </div>
-              <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={summaryChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" fontSize={11} />
-                    <YAxis fontSize={11} />
-                    <Tooltip formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Nominal']} />
-                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="h-52 w-full flex items-center justify-center">
+                {totalIncome === 0 && totalExpense === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Belum ada data transaksi untuk ditampilkan.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Nominal']} />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
