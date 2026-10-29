@@ -63,7 +63,7 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  // Simpan Transaksi ke Cloud
+  // Simpan Transaksi & Otomatis Kurangi/Tambah Saldo Dompet
   const handleSaveTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!txAmount || !txAccountId) {
@@ -72,29 +72,54 @@ export default function DashboardPage() {
     }
 
     setLoadingTx(true);
-    const { error } = await supabase.from('transactions').insert([
+    const amountVal = parseFloat(txAmount);
+
+    // 1. Simpan Transaksi ke tabel 'transactions'
+    const { error: txError } = await supabase.from('transactions').insert([
       {
         account_id: txAccountId,
         type: txType,
         description: txDescription,
-        amount: parseFloat(txAmount),
+        amount: amountVal,
         category: txCategory || 'Umum',
-        date: new Date().toISOString().split('T')[0], // Kolom tanggal wajib diisi otomatis
+        date: new Date().toISOString().split('T')[0],
       },
     ]);
 
-    setLoadingTx(false);
-
-    if (error) {
-      alert('Gagal menyimpan transaksi: ' + error.message);
-    } else {
-      alert('Transaksi berhasil disimpan!');
-      setTxDescription('');
-      setTxAmount('');
-      setTxCategory('');
-      setShowAddTransaction(false);
-      fetchData(session.user.id);
+    if (txError) {
+      alert('Gagal menyimpan transaksi: ' + txError.message);
+      setLoadingTx(false);
+      return;
     }
+
+    // 2. Ambil saldo dompet saat ini untuk diperbarui
+    const targetAccount = accounts.find((acc) => acc.id === txAccountId);
+    if (targetAccount) {
+      const currentBalance = Number(targetAccount.balance);
+      
+      // Jika income (pemasukan) ditambah, jika expense (pengeluaran) dikurangi
+      const updatedBalance = txType === 'income' 
+        ? currentBalance + amountVal 
+        : currentBalance - amountVal;
+
+      // 3. Perbarui saldo di tabel 'accounts'
+      const { error: accError } = await supabase
+        .from('accounts')
+        .update({ balance: updatedBalance })
+        .eq('id', txAccountId);
+
+      if (accError) {
+        alert('Gagal memperbarui saldo dompet: ' + accError.message);
+      }
+    }
+
+    setLoadingTx(false);
+    alert('Transaksi berhasil disimpan & saldo diperbarui!');
+    setTxDescription('');
+    setTxAmount('');
+    setTxCategory('');
+    setShowAddTransaction(false);
+    fetchData(session.user.id);
   };
 
   const totalBalance = accounts.reduce((acc, curr) => acc + Number(curr.balance || 0), 0);
