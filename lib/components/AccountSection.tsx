@@ -63,10 +63,7 @@ export default function AccountSection() {
     if (error) {
       alert('Gagal menyimpan: ' + error.message);
     } else {
-      setName('');
-      setBalance('');
-      fetchAccounts();
-      alert('Dompet berhasil disimpan! Mengalihkan ke dashboard...');
+      // Langsung arahkan otomatis ke dashboard utama setelah sukses
       router.push('/');
     }
   };
