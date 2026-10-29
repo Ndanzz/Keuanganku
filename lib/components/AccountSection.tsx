@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Wallet, PlusCircle, Trash2 } from 'lucide-react';
+import { Wallet, Trash2 } from 'lucide-react';
 
 export default function AccountSection() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -64,11 +64,22 @@ export default function AccountSection() {
       setName('');
       setBalance('');
       fetchAccounts();
+      alert('Dompet berhasil disimpan!');
+    }
+  };
+
+  // Fungsi untuk menghapus dompet
+  const handleDeleteAccount = async (id: string) => {
+    const { error } = await supabase.from('accounts').delete().eq('id', id);
+    if (!error) {
+      fetchAccounts();
+    } else {
+      alert('Gagal menghapus dompet: ' + error.message);
     }
   };
 
   return (
-    <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
+    <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
       <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
         <Wallet className="w-5 h-5 text-indigo-600" /> Daftar Rekening & Dompet
       </h2>
@@ -119,6 +130,32 @@ export default function AccountSection() {
           {loading ? 'Menyimpan...' : 'Simpan Dompet'}
         </button>
       </form>
+
+      {/* Daftar Dompet yang Tersimpan */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-700">Dompet Aktif</h3>
+        {accounts.length === 0 ? (
+          <p className="text-xs text-gray-400 italic">Belum ada rekening atau dompet yang ditambahkan.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {accounts.map((acc) => (
+              <div key={acc.id} className="flex justify-between items-center p-3 bg-gray-50 border border-gray-100 rounded-lg">
+                <div>
+                  <h4 className="font-bold text-sm text-gray-800">{acc.name}</h4>
+                  <p className="text-xs text-gray-500">{acc.type} • Saldo: Rp {Number(acc.balance).toLocaleString('id-ID')}</p>
+                </div>
+                <button
+                  onClick={() => handleDeleteAccount(acc.id)}
+                  className="text-red-400 hover:text-red-600 p-1 rounded"
+                  title="Hapus Dompet"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
