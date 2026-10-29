@@ -67,7 +67,7 @@ export default function AccountSection() {
       setBalance('');
       fetchAccounts();
       alert('Dompet berhasil disimpan! Mengalihkan ke dashboard...');
-      router.push('/'); // Otomatis pindah ke halaman utama setelah sukses
+      router.push('/');
     }
   };
 
@@ -82,14 +82,15 @@ export default function AccountSection() {
   };
 
   return (
-    <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
-      <div className="flex justify-between items-center">
+    <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6 relative z-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <Wallet className="w-5 h-5 text-indigo-600" /> Daftar Rekening & Dompet
         </h2>
         <button
+          type="button"
           onClick={() => router.push('/')}
-          className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-3 py-1.5 rounded-lg transition"
+          className="cursor-pointer text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-semibold bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition shadow-sm z-20"
         >
           Ke Dashboard <ArrowRight className="w-3.5 h-3.5" />
         </button>
@@ -136,7 +137,7 @@ export default function AccountSection() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition"
+          className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition cursor-pointer"
         >
           {loading ? 'Menyimpan...' : 'Simpan Dompet'}
         </button>
@@ -156,8 +157,9 @@ export default function AccountSection() {
                   <p className="text-xs text-gray-500">{acc.type} • Saldo: Rp {Number(acc.balance).toLocaleString('id-ID')}</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => handleDeleteAccount(acc.id)}
-                  className="text-red-400 hover:text-red-600 p-1 rounded"
+                  className="text-red-400 hover:text-red-600 p-1 rounded cursor-pointer"
                   title="Hapus Dompet"
                 >
                   <Trash2 className="w-4 h-4" />
