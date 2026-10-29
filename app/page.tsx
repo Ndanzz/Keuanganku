@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AccountSection from '@/lib/components/AccountSection';
-import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar, Target, PlusSquare } from 'lucide-react';
+import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar, Target, PlusSquare, BarChart2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -17,15 +17,12 @@ export default function DashboardPage() {
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
   
-  // State untuk modal tambah nominal target
   const [selectedGoal, setSelectedGoal] = useState<any>(null);
   const [addNominal, setAddNominal] = useState('');
   const [loadingAddNominal, setLoadingAddNominal] = useState(false);
 
-  // State filter bulan
   const [selectedMonth, setSelectedMonth] = useState('');
 
-  // State form transaksi
   const [txAccountId, setTxAccountId] = useState('');
   const [txType, setTxType] = useState('income');
   const [txDescription, setTxDescription] = useState('');
@@ -33,7 +30,6 @@ export default function DashboardPage() {
   const [txCategory, setTxCategory] = useState('');
   const [loadingTx, setLoadingTx] = useState(false);
 
-  // State form Target Tabungan
   const [goalTitle, setGoalTitle] = useState('');
   const [goalTargetAmount, setGoalTargetAmount] = useState('');
   const [goalCurrentAmount, setGoalCurrentAmount] = useState('');
@@ -87,7 +83,6 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  // Simpan Transaksi & Otomatis Kurangi/Tambah Saldo Dompet
   const handleSaveTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!txAmount || !txAccountId) {
@@ -137,7 +132,6 @@ export default function DashboardPage() {
     fetchData(session.user.id);
   };
 
-  // Simpan Target Tabungan Baru
   const handleSaveGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!goalTitle || !goalTargetAmount) {
@@ -169,7 +163,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Fungsi untuk Menambah Nominal ke Target yang Dipilih
   const handleAddToGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addNominal || !selectedGoal) return;
@@ -201,6 +194,20 @@ export default function DashboardPage() {
     ? transactions.filter((tx) => tx.date && tx.date.startsWith(selectedMonth))
     : transactions;
 
+  // Hitung total keseluruhan pemasukan dan pengeluaran untuk grafik ringkasan
+  const totalIncome = filteredTransactions
+    .filter((tx) => tx.type === 'income')
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+  const totalExpense = filteredTransactions
+    .filter((tx) => tx.type === 'expense')
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+  const summaryChartData = [
+    { name: 'Pemasukan', amount: totalIncome, fill: '#10b981' },
+    { name: 'Pengeluaran', amount: totalExpense, fill: '#f43f5e' },
+  ];
+
   if (!session) return null;
 
   return (
@@ -221,7 +228,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* KONDISI 1: Form Tambah Dompet */}
         {showAddAccount ? (
           <AccountSection 
             onSuccess={() => {
@@ -232,8 +238,6 @@ export default function DashboardPage() {
             onCancel={() => setShowAddAccount(false)}
           />
         ) : showAddTransaction ? (
-          
-          /* KONDISI 2: Halaman Tambah Transaksi */
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
             <div className="bg-white p-4 rounded-xl border border-gray-100 space-y-2">
               <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -353,8 +357,6 @@ export default function DashboardPage() {
             </form>
           </div>
         ) : showAddGoal ? (
-          
-          /* KONDISI 3: Form Tambah Target Tabungan */
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -415,12 +417,10 @@ export default function DashboardPage() {
             </form>
           </div>
         ) : selectedGoal ? (
-          
-          /* KONDISI 4: Form Tambah Nominal ke Target Tertentu */
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <PlusSquare className="w-4 h-4 text-indigo-600" /> Menabung untuk: {selectedGoal.title}
+                <Target className="w-4 h-4 text-indigo-600" /> Menabung untuk: {selectedGoal.title}
               </h2>
               <button
                 type="button"
@@ -486,7 +486,28 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* List Target Tabungan Impian (Dilengkapi Tombol Tambah Nominal) */}
+            {/* Grafik Keseluruhan Pemasukan vs Pengeluaran */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <BarChart2 className="w-4 h-4 text-indigo-600" /> Ringkasan Keuangan
+                </h3>
+                <span className="text-[10px] text-gray-400">Total Pemasukan vs Pengeluaran</span>
+              </div>
+              <div className="h-44 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={summaryChartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" fontSize={11} />
+                    <YAxis fontSize={11} />
+                    <Tooltip formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Nominal']} />
+                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* List Target Tabungan Impian */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-3">
               <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                 <Target className="w-4 h-4 text-indigo-600" /> Target Tabungan Impian
@@ -506,7 +527,6 @@ export default function DashboardPage() {
                             <button
                               onClick={() => setSelectedGoal(goal)}
                               className="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1"
-                              title="Tambah Nominal Tabungan"
                             >
                               <Plus className="w-3 h-3" /> Tabung
                             </button>
