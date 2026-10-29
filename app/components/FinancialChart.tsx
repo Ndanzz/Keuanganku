@@ -1,49 +1,93 @@
 "use client";
 
-import React from "react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-} from "recharts";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase"; // Sesuaikan jalur impor Supabase jika diperlukan
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
 
-// Contoh data transaksi per bulan (bisa disesuaikan dengan data dari Supabase)
-const data = [
-  { month: "Jan", income: 4500000, expense: 3200000 },
-  { month: "Feb", income: 5000000, expense: 4100000 },
-  { month: "Mar", income: 4800000, expense: 3900000 },
-  { month: "Apr", income: 5200000, expense: 4500000 },
-  { month: "Mei", income: 6000000, expense: 4200000 },
-  { month: "Jun", income: 5500000, expense: 4800000 },
-];
+interface ChartData {
+  month: string;
+  pemasukan: number;
+  pengeluaran: number;
+}
 
 export default function FinancialChart() {
+  const [data, setData] = useState<ChartData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTransactionData() {
+      try {
+        setLoading(true);
+        // Ambil data transaksi dari Supabase (sesuaikan nama tabel 'transactions' jika berbeda)
+        const { data: transactions, error } = await supabase
+          .from("transactions")
+          .select("amount, type, date");
+
+        if (error) {
+          console.error("Gagal mengambil data transaksi:", error);
+          return;
+        }
+
+        // Kelompokkan data berdasarkan bulan
+        const monthlyMap: { [key: string]: { pemasukan: number; pengeluaran: number } } = {};
+
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+
+        // Inisialisasi bulan standar atau biarkan dinamis dari data
+        transactions?.forEach((trx) => {
+          const dateObj = new Date(trx.date);
+          const monthName = monthNames[dateObj.getMonth()];
+
+          if (!monthlyMap[monthName]) {
+            monthlyMap[monthName] = { pemasukan: 0, pengeluaran: 0 };
+          }
+
+          if (trx.type === "income" || trx.type === "pemasukan") {
+            monthlyMap[monthName].pemasukan += Number(trx.amount);
+          } else if (trx.type === "expense" || trx.type === "pengeluaran") {
+            monthlyMap[monthName].pengeluaran += Number(trx.amount);
+          }
+        });
+
+        // Format data untuk Recharts
+        const formattedData = Object.keys(monthlyMap).map((month) => ({
+          month,
+          pemasukan: monthlyMap[month].pemasukan,
+          pengeluaran: monthlyMap[month].pengeluaran,
+        }));
+
+        setData(formattedData);
+      } catch (err) {
+        console.error("Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTransactionData();
+  }, []);
+
+  if (loading) {
+    return <div className="py-12 text-center text-sm text-gray-500">Memuat data grafik dari Supabase...</div>;
+  }
+
+  if (data.length === 0) {
+    return <div className="py-12 text-center text-sm text-gray-500">Belum ada data transaksi yang tercatat di database.</div>;
+  }
+
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 my-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
-        Analisis Tren Pemasukan vs Pengeluaran
-      </h3>
-      <div className="w-full h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-            <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
-            <YAxis stroke="#6B7280" fontSize={12} tickFormatter={(value) => `Rp ${value / 1000000}jt`} />
-            <Tooltip
-              formatter={(value: number) => [`Rp ${value.toLocaleString("id-ID")}`, ""]}
-              contentStyle={{ backgroundColor: "#F9FAFB", borderRadius: "8px", border: "1px solid #E5E7EB" }}
-            />
-            <Legend wrapperStyle={{ paddingTop: "15px" }} />
-            <Bar dataKey="income" name="Pemasukan" fill="#10B981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="expense" name="Pengeluaran" fill="#EF4444" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="w-full h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="month" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="pemasukan" name="Pemasukan" fill="#10B981" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="pengeluaran" name="Pengeluaran" fill="#EF4444" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
