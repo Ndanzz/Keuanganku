@@ -1,20 +1,12 @@
-import type { NextConfig } from "next";
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+});
 
-const nextConfig: NextConfig = {
-  /* config options here */
-  experimental: {
-    agentFeedback: true,
-  },
-  cacheComponents: true,
-  partialPrefetching: true,
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
-};
+/** @type {import('next').NextConfig} */
+const nextConfig = withPWA({
+  // Tambahkan konfigurasi lain di sini jika ada
+});
 
-export default nextConfig;
+module.exports = nextConfig;
