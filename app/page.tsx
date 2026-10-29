@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AccountSection from '@/lib/components/AccountSection';
-import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft } from 'lucide-react';
+import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -47,11 +47,11 @@ export default function DashboardPage() {
       if (accData.length > 0 && !txAccountId) setTxAccountId(accData[0].id);
     }
 
-    // Ambil data transactions jika ada
+    // Ambil data transactions diurutkan dari yang terbaru
     const { data: txData } = await supabase
       .from('transactions')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('date', { ascending: false });
 
     if (txData) {
       setTransactions(txData);
@@ -97,7 +97,6 @@ export default function DashboardPage() {
     if (targetAccount) {
       const currentBalance = Number(targetAccount.balance);
       
-      // Jika income (pemasukan) ditambah, jika expense (pengeluaran) dikurangi
       const updatedBalance = txType === 'income' 
         ? currentBalance + amountVal 
         : currentBalance - amountVal;
@@ -149,7 +148,7 @@ export default function DashboardPage() {
           <AccountSection 
             onSuccess={() => {
               setShowAddAccount(false);
-              setShowAddTransaction(true); // Otomatis pindah ke halaman tambah transaksi
+              setShowAddTransaction(true); 
               fetchData(session.user.id);
             }} 
             onCancel={() => setShowAddAccount(false)}
@@ -280,7 +279,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           
-          /* KONDISI 3: Dashboard Utama Ringkasan Saldo */
+          /* KONDISI 3: Dashboard Utama Ringkasan Saldo & Riwayat Transaksi */
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 flex flex-col justify-between">
               <div>
@@ -326,6 +325,31 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+
+            {/* Riwayat Transaksi Terbaru */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <History className="w-4 h-4 text-indigo-600" /> Riwayat Transaksi Terbaru
+              </h3>
+              {transactions.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Belum ada riwayat transaksi yang tercatat.</p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {transactions.map((tx) => (
+                    <div key={tx.id} className="p-3 bg-gray-50 border border-gray-100 rounded-xl flex justify-between items-center">
+                      <div className="space-y-0.5">
+                        <h4 className="font-bold text-xs text-gray-800">{tx.description}</h4>
+                        <p className="text-[10px] text-gray-400">{tx.category} • {tx.date}</p>
+                      </div>
+                      <span className={`font-bold text-xs ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {tx.type === 'income' ? '+' : '-'} Rp {Number(tx.amount).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
