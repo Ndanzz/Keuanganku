@@ -44,7 +44,7 @@ export default function DashboardPage() {
 
     if (accData) {
       setAccounts(accData);
-      if (accData.length > 0) setTxAccountId(accData[0].id);
+      if (accData.length > 0 && !txAccountId) setTxAccountId(accData[0].id);
     }
 
     // Ambil data transactions jika ada
@@ -79,6 +79,7 @@ export default function DashboardPage() {
         description: txDescription,
         amount: parseFloat(txAmount),
         category: txCategory || 'Umum',
+        date: new Date().toISOString().split('T')[0], // Kolom tanggal wajib diisi otomatis
       },
     ]);
 
@@ -123,14 +124,14 @@ export default function DashboardPage() {
           <AccountSection 
             onSuccess={() => {
               setShowAddAccount(false);
-              setShowAddTransaction(true); // OTOMATIS PINDAH KE HALAMAN TAMBAH TRANSAKSI DI SINI!
+              setShowAddTransaction(true); // Otomatis pindah ke halaman tambah transaksi
               fetchData(session.user.id);
             }} 
             onCancel={() => setShowAddAccount(false)}
           />
         ) : showAddTransaction ? (
           
-          /* KONDISI 2: Halaman Tambah Transaksi (Sesuai Gambar Pesanan) */
+          /* KONDISI 2: Halaman Tambah Transaksi */
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
             
             {/* Grafik Pengeluaran Per Kategori */}
