@@ -1,6 +1,20 @@
+"use client";
+
+import { useState } from "react";
 import FinancialChart from "./components/FinancialChart";
+import AccountSection from "./components/AccountSection";
 
 export default function Page() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleSuccess = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleCancel = () => {
+    // Aksi ketika dibatalkan (opsional)
+  };
+
   return (
     <main className="p-6 max-w-7xl mx-auto space-y-8">
       {/* Header Utama Aplikasi */}
@@ -11,21 +25,25 @@ export default function Page() {
         </div>
       </header>
 
+      {/* Bagian Manajemen Dompet / Akun */}
+      <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan Dompet & Akun</h2>
+        <AccountSection onSuccess={handleSuccess} onCancel={handleCancel} />
+      </section>
+
       {/* Bagian Komponen Grafik Analisis Tren Keuangan */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Analisis Tren Keuangan</h2>
         <FinancialChart />
       </section>
 
-      {/* Bagian Ringkasan & Fitur Lainnya */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-md font-semibold text-gray-800 mb-2">Ringkasan Dompet</h3>
-          <p className="text-sm text-gray-500">Kelola akun dan pantau saldo aktif dompetmu di sini.</p>
+      {/* Bagian Riwayat & Tabel Transaksi */}
+      <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">Riwayat Transaksi</h2>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-md font-semibold text-gray-800 mb-2">Riwayat Transaksi</h3>
-          <p className="text-sm text-gray-500">Daftar pemasukan dan pengeluaran terbaru tercatat secara otomatis.</p>
+        <div className="text-sm text-gray-500 py-8 text-center border-2 border-dashed rounded-xl">
+          Tabel riwayat pemasukan dan pengeluaran aktif termuat di sini.
         </div>
       </section>
     </main>
