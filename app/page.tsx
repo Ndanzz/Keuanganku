@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AccountSection from '@/lib/components/AccountSection';
-import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar, Target } from 'lucide-react';
+import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar, Target, PlusSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -17,6 +17,11 @@ export default function DashboardPage() {
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
   
+  // State untuk modal tambah nominal target
+  const [selectedGoal, setSelectedGoal] = useState<any>(null);
+  const [addNominal, setAddNominal] = useState('');
+  const [loadingAddNominal, setLoadingAddNominal] = useState(false);
+
   // State filter bulan
   const [selectedMonth, setSelectedMonth] = useState('');
 
@@ -48,7 +53,6 @@ export default function DashboardPage() {
   }, [router]);
 
   const fetchData = async (userId: string) => {
-    // Ambil data accounts
     const { data: accData } = await supabase
       .from('accounts')
       .select('*')
@@ -59,7 +63,6 @@ export default function DashboardPage() {
       if (accData.length > 0 && !txAccountId) setTxAccountId(accData[0].id);
     }
 
-    // Ambil data transactions
     const { data: txData } = await supabase
       .from('transactions')
       .select('*')
@@ -69,7 +72,6 @@ export default function DashboardPage() {
       setTransactions(txData);
     }
 
-    // Ambil data goals
     const { data: goalData } = await supabase
       .from('goals')
       .select('*')
@@ -163,6 +165,32 @@ export default function DashboardPage() {
       setGoalTargetAmount('');
       setGoalCurrentAmount('');
       setShowAddGoal(false);
+      fetchData(session.user.id);
+    }
+  };
+
+  // Fungsi untuk Menambah Nominal ke Target yang Dipilih
+  const handleAddToGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addNominal || !selectedGoal) return;
+
+    setLoadingAddNominal(true);
+    const addVal = parseFloat(addNominal);
+    const newCurrentAmount = Number(selectedGoal.current_amount || 0) + addVal;
+
+    const { error } = await supabase
+      .from('goals')
+      .update({ current_amount: newCurrentAmount })
+      .eq('id', selectedGoal.id);
+
+    setLoadingAddNominal(false);
+
+    if (error) {
+      alert('Gagal menambah nominal tabungan: ' + error.message);
+    } else {
+      alert('Berhasil menabung ke target!');
+      setAddNominal('');
+      setSelectedGoal(null);
       fetchData(session.user.id);
     }
   };
@@ -386,9 +414,48 @@ export default function DashboardPage() {
               </button>
             </form>
           </div>
+        ) : selectedGoal ? (
+          
+          /* KONDISI 4: Form Tambah Nominal ke Target Tertentu */
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <PlusSquare className="w-4 h-4 text-indigo-600" /> Menabung untuk: {selectedGoal.title}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSelectedGoal(null)}
+                className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-medium cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Batal
+              </button>
+            </div>
+
+            <form onSubmit={handleAddToGoal} className="space-y-4">
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Nominal yang Ditambahkan (Rp)</label>
+                <input
+                  type="number"
+                  placeholder="cth: 100000"
+                  value={addNominal}
+                  onChange={(e) => setAddNominal(e.target.value)}
+                  className="w-full mt-1 p-2.5 border rounded-xl text-sm bg-white text-gray-800"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loadingAddNominal}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md cursor-pointer"
+              >
+                {loadingAddNominal ? 'Menyimpan...' : 'Tambah ke Target'}
+              </button>
+            </form>
+          </div>
         ) : (
           
-          /* KONDISI 4: Dashboard Utama */
+          /* KONDISI 5: Dashboard Utama */
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 flex flex-col justify-between">
               <div>
@@ -419,7 +486,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* List Target Tabungan Impian */}
+            {/* List Target Tabungan Impian (Dilengkapi Tombol Tambah Nominal) */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-3">
               <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                 <Target className="w-4 h-4 text-indigo-600" /> Target Tabungan Impian
@@ -431,10 +498,19 @@ export default function DashboardPage() {
                   {goals.map((goal) => {
                     const percentage = Math.min(Math.round((goal.current_amount / goal.target_amount) * 100), 100);
                     return (
-                      <div key={goal.id} className="p-3.5 bg-gray-50 border border-gray-100 rounded-xl space-y-2">
+                      <div key={goal.id} className="p-3.5 bg-gray-50 border border-gray-100 rounded-xl space-y-2.5">
                         <div className="flex justify-between items-center">
                           <h4 className="font-bold text-xs text-gray-800">{goal.title}</h4>
-                          <span className="text-[10px] font-bold text-indigo-600">{percentage}%</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-indigo-600">{percentage}%</span>
+                            <button
+                              onClick={() => setSelectedGoal(goal)}
+                              className="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1"
+                              title="Tambah Nominal Tabungan"
+                            >
+                              <Plus className="w-3 h-3" /> Tabung
+                            </button>
+                          </div>
                         </div>
                         <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
                           <div 
