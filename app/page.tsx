@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AccountSection from '@/lib/components/AccountSection';
-import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar } from 'lucide-react';
+import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar, Target } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -11,10 +11,13 @@ export default function DashboardPage() {
   const [session, setSession] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [goals, setGoals] = useState<any[]>([]);
+  
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [showAddGoal, setShowAddGoal] = useState(false);
   
-  // State filter bulan (Format: YYYY-MM, contoh: 2026-10). Kosongkan untuk menampilkan semua.
+  // State filter bulan
   const [selectedMonth, setSelectedMonth] = useState('');
 
   // State form transaksi
@@ -24,6 +27,12 @@ export default function DashboardPage() {
   const [txAmount, setTxAmount] = useState('');
   const [txCategory, setTxCategory] = useState('');
   const [loadingTx, setLoadingTx] = useState(false);
+
+  // State form Target Tabungan
+  const [goalTitle, setGoalTitle] = useState('');
+  const [goalTargetAmount, setGoalTargetAmount] = useState('');
+  const [goalCurrentAmount, setGoalCurrentAmount] = useState('');
+  const [loadingGoal, setLoadingGoal] = useState(false);
 
   const router = useRouter();
 
@@ -50,7 +59,7 @@ export default function DashboardPage() {
       if (accData.length > 0 && !txAccountId) setTxAccountId(accData[0].id);
     }
 
-    // Ambil data transactions diurutkan dari yang terbaru
+    // Ambil data transactions
     const { data: txData } = await supabase
       .from('transactions')
       .select('*')
@@ -58,6 +67,16 @@ export default function DashboardPage() {
 
     if (txData) {
       setTransactions(txData);
+    }
+
+    // Ambil data goals
+    const { data: goalData } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (goalData) {
+      setGoals(goalData);
     }
   };
 
@@ -77,7 +96,6 @@ export default function DashboardPage() {
     setLoadingTx(true);
     const amountVal = parseFloat(txAmount);
 
-    // 1. Simpan Transaksi ke tabel 'transactions'
     const { error: txError } = await supabase.from('transactions').insert([
       {
         account_id: txAccountId,
@@ -95,24 +113,17 @@ export default function DashboardPage() {
       return;
     }
 
-    // 2. Ambil saldo dompet saat ini untuk diperbarui
     const targetAccount = accounts.find((acc) => acc.id === txAccountId);
     if (targetAccount) {
       const currentBalance = Number(targetAccount.balance);
-      
       const updatedBalance = txType === 'income' 
         ? currentBalance + amountVal 
         : currentBalance - amountVal;
 
-      // 3. Perbarui saldo di tabel 'accounts'
-      const { error: accError } = await supabase
+      await supabase
         .from('accounts')
         .update({ balance: updatedBalance })
         .eq('id', txAccountId);
-
-      if (accError) {
-        alert('Gagal memperbarui saldo dompet: ' + accError.message);
-      }
     }
 
     setLoadingTx(false);
@@ -124,9 +135,40 @@ export default function DashboardPage() {
     fetchData(session.user.id);
   };
 
+  // Simpan Target Tabungan Baru
+  const handleSaveGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!goalTitle || !goalTargetAmount) {
+      alert('Nama target dan jumlah target harus diisi!');
+      return;
+    }
+
+    setLoadingGoal(true);
+    const { error } = await supabase.from('goals').insert([
+      {
+        user_id: session.user.id,
+        title: goalTitle,
+        target_amount: parseFloat(goalTargetAmount),
+        current_amount: parseFloat(goalCurrentAmount || '0'),
+      },
+    ]);
+
+    setLoadingGoal(false);
+
+    if (error) {
+      alert('Gagal menyimpan target: ' + error.message);
+    } else {
+      alert('Target tabungan berhasil ditambahkan!');
+      setGoalTitle('');
+      setGoalTargetAmount('');
+      setGoalCurrentAmount('');
+      setShowAddGoal(false);
+      fetchData(session.user.id);
+    }
+  };
+
   const totalBalance = accounts.reduce((acc, curr) => acc + Number(curr.balance || 0), 0);
 
-  // Filter transaksi berdasarkan bulan yang dipilih (jika ada)
   const filteredTransactions = selectedMonth
     ? transactions.filter((tx) => tx.date && tx.date.startsWith(selectedMonth))
     : transactions;
@@ -165,8 +207,6 @@ export default function DashboardPage() {
           
           /* KONDISI 2: Halaman Tambah Transaksi */
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
-            
-            {/* Grafik Pengeluaran Per Kategori */}
             <div className="bg-white p-4 rounded-xl border border-gray-100 space-y-2">
               <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-indigo-600" /> Pengeluaran Per Kategori
@@ -188,7 +228,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Form Tambah Transaksi */}
             <form onSubmit={handleSaveTransaction} className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -285,9 +324,71 @@ export default function DashboardPage() {
               </button>
             </form>
           </div>
+        ) : showAddGoal ? (
+          
+          /* KONDISI 3: Form Tambah Target Tabungan */
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <Target className="w-4 h-4 text-indigo-600" /> Tambah Target Tabungan
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowAddGoal(false)}
+                className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-medium cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Kembali
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGoal} className="space-y-4">
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Judul Target Impian</label>
+                <input
+                  type="text"
+                  placeholder="cth: Beli Laptop Baru, Dana Liburan"
+                  value={goalTitle}
+                  onChange={(e) => setGoalTitle(e.target.value)}
+                  className="w-full mt-1 p-2.5 border rounded-xl text-sm bg-white text-gray-800"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Target Nominal (Rp)</label>
+                <input
+                  type="number"
+                  placeholder="cth: 10000000"
+                  value={goalTargetAmount}
+                  onChange={(e) => setGoalTargetAmount(e.target.value)}
+                  className="w-full mt-1 p-2.5 border rounded-xl text-sm bg-white text-gray-800"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Tabungan Terkumpul Saat Ini (Rp)</label>
+                <input
+                  type="number"
+                  placeholder="cth: 1500000"
+                  value={goalCurrentAmount}
+                  onChange={(e) => setGoalCurrentAmount(e.target.value)}
+                  className="w-full mt-1 p-2.5 border rounded-xl text-sm bg-white text-gray-800"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loadingGoal}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md cursor-pointer"
+              >
+                {loadingGoal ? 'Menyimpan...' : 'Simpan Target'}
+              </button>
+            </form>
+          </div>
         ) : (
           
-          /* KONDISI 3: Dashboard Utama Ringkasan Saldo & Riwayat Transaksi */
+          /* KONDISI 4: Dashboard Utama */
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 flex flex-col justify-between">
               <div>
@@ -296,20 +397,60 @@ export default function DashboardPage() {
                   Rp {totalBalance.toLocaleString('id-ID')}
                 </h2>
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 <button
                   onClick={() => setShowAddAccount(true)}
-                  className="cursor-pointer flex-1 text-xs flex items-center justify-center gap-1 text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl transition font-semibold shadow-sm"
+                  className="cursor-pointer flex-1 text-xs flex items-center justify-center gap-1 text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2.5 rounded-xl transition font-semibold shadow-sm"
                 >
-                  <Plus className="w-4 h-4" /> Tambah Dompet
+                  <Plus className="w-4 h-4" /> Dompet
                 </button>
                 <button
                   onClick={() => setShowAddTransaction(true)}
-                  className="cursor-pointer flex-1 text-xs flex items-center justify-center gap-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2.5 rounded-xl transition font-semibold"
+                  className="cursor-pointer flex-1 text-xs flex items-center justify-center gap-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-2.5 rounded-xl transition font-semibold"
                 >
-                  <PlusCircle className="w-4 h-4" /> Catat Transaksi
+                  <PlusCircle className="w-4 h-4" /> Transaksi
+                </button>
+                <button
+                  onClick={() => setShowAddGoal(true)}
+                  className="cursor-pointer flex-1 text-xs flex items-center justify-center gap-1 text-amber-600 bg-amber-50 hover:bg-amber-100 px-3 py-2.5 rounded-xl transition font-semibold"
+                >
+                  <Target className="w-4 h-4" /> Target
                 </button>
               </div>
+            </div>
+
+            {/* List Target Tabungan Impian */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <Target className="w-4 h-4 text-indigo-600" /> Target Tabungan Impian
+              </h3>
+              {goals.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Belum ada target tabungan. Klik tombol "Target" di atas untuk membuat.</p>
+              ) : (
+                <div className="space-y-3">
+                  {goals.map((goal) => {
+                    const percentage = Math.min(Math.round((goal.current_amount / goal.target_amount) * 100), 100);
+                    return (
+                      <div key={goal.id} className="p-3.5 bg-gray-50 border border-gray-100 rounded-xl space-y-2">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-bold text-xs text-gray-800">{goal.title}</h4>
+                          <span className="text-[10px] font-bold text-indigo-600">{percentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-indigo-600 h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-gray-500">
+                          <span>Terkumpul: Rp {Number(goal.current_amount || 0).toLocaleString('id-ID')}</span>
+                          <span>Target: Rp {Number(goal.target_amount || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* List Dompet Terdaftar */}
@@ -341,7 +482,6 @@ export default function DashboardPage() {
                   <History className="w-4 h-4 text-indigo-600" /> Riwayat Transaksi
                 </h3>
                 
-                {/* Input Filter Bulan */}
                 <div className="flex items-center gap-1.5 w-full sm:w-auto">
                   <Calendar className="w-3.5 h-3.5 text-gray-400" />
                   <input
