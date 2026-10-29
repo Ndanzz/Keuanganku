@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Wallet, Trash2 } from 'lucide-react';
+import { Wallet, Trash2, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function AccountSection() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -10,6 +11,7 @@ export default function AccountSection() {
   const [type, setType] = useState('Bank');
   const [balance, setBalance] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   // Fungsi mengambil daftar dompet dari Supabase
   const fetchAccounts = async () => {
@@ -64,7 +66,8 @@ export default function AccountSection() {
       setName('');
       setBalance('');
       fetchAccounts();
-      alert('Dompet berhasil disimpan!');
+      alert('Dompet berhasil disimpan! Mengalihkan ke dashboard...');
+      router.push('/'); // Otomatis pindah ke halaman utama setelah sukses
     }
   };
 
@@ -80,9 +83,17 @@ export default function AccountSection() {
 
   return (
     <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
-      <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-        <Wallet className="w-5 h-5 text-indigo-600" /> Daftar Rekening & Dompet
-      </h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <Wallet className="w-5 h-5 text-indigo-600" /> Daftar Rekening & Dompet
+        </h2>
+        <button
+          onClick={() => router.push('/')}
+          className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-3 py-1.5 rounded-lg transition"
+        >
+          Ke Dashboard <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
 
       {/* Form Input Dompet */}
       <form onSubmit={handleAddAccount} className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-100">
