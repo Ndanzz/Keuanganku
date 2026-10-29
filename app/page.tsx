@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AccountSection from '@/lib/components/AccountSection';
-import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History } from 'lucide-react';
+import { Wallet, Plus, LogOut, TrendingUp, PlusCircle, ArrowDownLeft, ArrowUpRight, ArrowLeft, History, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -14,6 +14,9 @@ export default function DashboardPage() {
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   
+  // State filter bulan (Format: YYYY-MM, contoh: 2026-10). Kosongkan untuk menampilkan semua.
+  const [selectedMonth, setSelectedMonth] = useState('');
+
   // State form transaksi
   const [txAccountId, setTxAccountId] = useState('');
   const [txType, setTxType] = useState('income');
@@ -122,6 +125,11 @@ export default function DashboardPage() {
   };
 
   const totalBalance = accounts.reduce((acc, curr) => acc + Number(curr.balance || 0), 0);
+
+  // Filter transaksi berdasarkan bulan yang dipilih (jika ada)
+  const filteredTransactions = selectedMonth
+    ? transactions.filter((tx) => tx.date && tx.date.startsWith(selectedMonth))
+    : transactions;
 
   if (!session) return null;
 
@@ -326,16 +334,38 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Riwayat Transaksi Terbaru */}
+            {/* Riwayat Transaksi Terbaru dengan Filter Bulan */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-3">
-              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <History className="w-4 h-4 text-indigo-600" /> Riwayat Transaksi Terbaru
-              </h3>
-              {transactions.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Belum ada riwayat transaksi yang tercatat.</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <History className="w-4 h-4 text-indigo-600" /> Riwayat Transaksi
+                </h3>
+                
+                {/* Input Filter Bulan */}
+                <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                  <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="text-xs p-1.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 w-full sm:w-auto"
+                  />
+                  {selectedMonth && (
+                    <button
+                      onClick={() => setSelectedMonth('')}
+                      className="text-[10px] text-indigo-600 hover:underline font-medium px-1"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {filteredTransactions.length === 0 ? (
+                <p className="text-xs text-gray-400 italic py-2">Belum ada riwayat transaksi pada bulan ini.</p>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {transactions.map((tx) => (
+                  {filteredTransactions.map((tx) => (
                     <div key={tx.id} className="p-3 bg-gray-50 border border-gray-100 rounded-xl flex justify-between items-center">
                       <div className="space-y-0.5">
                         <h4 className="font-bold text-xs text-gray-800">{tx.description}</h4>
