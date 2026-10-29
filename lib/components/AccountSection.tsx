@@ -1,22 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getAccounts, addAccount, Account } from '@/lib/supabase';
-import { Wallet, Building2, CreditCard, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Wallet, PlusCircle, Trash2 } from 'lucide-react';
 
 export default function AccountSection() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [name, setName] = useState('');
-  const [type, setType] = useState<'bank' | 'e-wallet' | 'cash'>('bank');
+  const [type, setType] = useState('Bank');
   const [balance, setBalance] = useState('');
+  const [loading, setLoading] = useState(false);
 
+  // Fungsi mengambil daftar dompet dari Supabase
   const fetchAccounts = async () => {
-    try {
-      const data = await getAccounts();
-      setAccounts(data || []);
-    } catch (err) {
-      console.error('Gagal mengambil data akun:', err);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('user_id', session.user.id);
+
+    if (!error && data) {
+      setAccounts(data);
     }
   };
 
@@ -24,109 +30,95 @@ export default function AccountSection() {
     fetchAccounts();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Fungsi saat tombol "Simpan Dompet" diklik
+  const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !balance) return;
+    if (!name || !balance) {
+      alert('Nama dompet dan saldo awal harus diisi!');
+      return;
+    }
 
-    try {
-      await addAccount({
-        name,
-        type,
+    setLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      alert('Sesi kedaluwarsa, silakan login ulang.');
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.from('accounts').insert([
+      {
+        user_id: session.user.id,
+        name: name,
+        type: type,
         balance: parseFloat(balance),
-      });
+      },
+    ]);
+
+    setLoading(false);
+
+    if (error) {
+      alert('Gagal menyimpan: ' + error.message);
+    } else {
       setName('');
       setBalance('');
-      setIsOpen(false);
       fetchAccounts();
-    } catch (err) {
-      console.error('Gagal menambah akun:', err);
-    }
-  };
-
-  const getIcon = (accountType: string) => {
-    switch (accountType) {
-      case 'bank':
-        return <Building2 className="w-5 h-5 text-blue-500" />;
-      case 'e-wallet':
-        return <CreditCard className="w-5 h-5 text-emerald-500" />;
-      default:
-        return <Wallet className="w-5 h-5 text-amber-500" />;
     }
   };
 
   return (
-    <div className="mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800">Daftar Rekening & Dompet</h2>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1 text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition"
-        >
-          <Plus className="w-4 h-4" /> Tambah
-        </button>
-      </div>
+    <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
+      <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <Wallet className="w-5 h-5 text-indigo-600" /> Daftar Rekening & Dompet
+      </h2>
 
-      {/* Form Tambah Akun */}
-      {isOpen && (
-        <form onSubmit={handleSubmit} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 space-y-3">
+      {/* Form Input Dompet */}
+      <form onSubmit={handleAddAccount} className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Nama Dompet/Bank</label>
+            <label className="text-xs text-gray-500 font-medium">Nama Dompet/Bank</label>
             <input
               type="text"
               placeholder="Contoh: BCA, Gopay, Kas"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm border rounded-lg p-2 outline-none focus:border-indigo-500"
+              className="w-full mt-1 p-2 border rounded-lg text-sm bg-white text-gray-800"
+              required
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Tipe</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value as any)}
-                className="w-full text-sm border rounded-lg p-2 outline-none focus:border-indigo-500"
-              >
-                <option value="bank">Bank</option>
-                <option value="e-wallet">E-Wallet</option>
-                <option value="cash">Tunai / Kas</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Saldo Awal</label>
-              <input
-                type="number"
-                placeholder="0"
-                value={balance}
-                onChange={(e) => setBalance(e.target.value)}
-                className="w-full text-sm border rounded-lg p-2 outline-none focus:border-indigo-500"
-              />
-            </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium">Tipe</label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full mt-1 p-2 border rounded-lg text-sm bg-white text-gray-800"
+            >
+              <option value="Bank">Bank</option>
+              <option value="E-Wallet">E-Wallet</option>
+              <option value="Cash">Cash / Tunai</option>
+            </select>
           </div>
-          <button
-            type="submit"
-            className="w-full text-sm bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition"
-          >
-            Simpan Dompet
-          </button>
-        </form>
-      )}
-
-      {/* Grid Kartu Dompet */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {accounts.map((acc) => (
-          <div key={acc.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
-            <div className="p-2.5 bg-gray-50 rounded-lg">{getIcon(acc.type)}</div>
-            <div>
-              <p className="text-xs text-gray-500 capitalize">{acc.type}</p>
-              <p className="text-sm font-semibold text-gray-800">{acc.name}</p>
-              <p className="text-sm font-bold text-indigo-600">
-                Rp {acc.balance.toLocaleString('id-ID')}
-              </p>
-            </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium">Saldo Awal</label>
+            <input
+              type="number"
+              placeholder="0"
+              value={balance}
+              onChange={(e) => setBalance(e.target.value)}
+              className="w-full mt-1 p-2 border rounded-lg text-sm bg-white text-gray-800"
+              required
+            />
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition"
+        >
+          {loading ? 'Menyimpan...' : 'Simpan Dompet'}
+        </button>
+      </form>
+    </section>
   );
 }
