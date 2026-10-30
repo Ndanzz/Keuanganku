@@ -13,30 +13,33 @@ import {
   Legend,
 } from "recharts";
 
-// ============================================================================
-// Kode Lengkap Keuanganku - Fleksibel Deteksi Kolom Saldo Dompet
-// ============================================================================
 export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // State: Manajemen Dompet & Akun
+  // State: Dompet & Akun
   const [accountName, setAccountName] = useState("");
   const [accountType, setAccountType] = useState("Bank");
   const [initialBalance, setInitialBalance] = useState("0");
   const [loadingAccount, setLoadingAccount] = useState(false);
   const [accountsList, setAccountsList] = useState<any[]>([]);
 
-  // State: Form Pemasukan
+  // State: Target Tabungan (Savings Goals)
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalTarget, setGoalTarget] = useState("");
+  const [goalCurrent, setGoalCurrent] = useState("");
+  const [loadingGoal, setLoadingGoal] = useState(false);
+  const [goalsList, setGoalsList] = useState<any[]>([]);
+
+  // State: Form Pemasukan & Pengeluaran
   const [incomeAmount, setIncomeAmount] = useState("");
   const [incomeDesc, setIncomeDesc] = useState("");
   const [loadingIncome, setLoadingIncome] = useState(false);
 
-  // State: Form Pengeluaran
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDesc, setExpenseDesc] = useState("");
   const [loadingExpense, setLoadingExpense] = useState(false);
 
-  // State: Transaksi & Statistik Saldo
+  // State: Transaksi & Statistik
   const [transactions, setTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
@@ -47,10 +50,10 @@ export default function Page() {
     setRefreshKey((prev) => prev + 1);
   };
 
-  // Fetch Data Akun & Transaksi dari Supabase
+  // Fetch Semua Data dari Supabase
   useEffect(() => {
     const fetchAllData = async () => {
-      // 1. Ambil Data Dompet / Akun
+      // 1. Ambil Data Dompet
       const { data: accData, error: accError } = await supabase
         .from("accounts")
         .select("*")
@@ -62,7 +65,17 @@ export default function Page() {
         currentAccounts = accData;
       }
 
-      // 2. Ambil Data Transaksi
+      // 2. Ambil Data Target Keuangan (Goals)
+      const { data: goalData, error: goalError } = await supabase
+        .from("goals")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (!goalError && goalData) {
+        setGoalsList(goalData);
+      }
+
+      // 3. Ambil Data Transaksi
       const { data: txData, error: txError } = await supabase
         .from("transactions")
         .select("*")
@@ -84,7 +97,7 @@ export default function Page() {
           }
         });
 
-        // Proses Data untuk Grafik Recharts per Bulan
+        // Proses Data Grafik Recharts
         const grouped: { [key: string]: { pemasukan: number; pengeluaran: number } } = {};
 
         txData.forEach((tx) => {
@@ -117,10 +130,10 @@ export default function Page() {
       setTotalIncome(inc);
       setTotalExpense(exp);
 
-      // 3. Akumulasi Total Saldo Keseluruhan (Mendukung berbagai nama kolom saldo di database)
+      // Hitung Total Saldo Keseluruhan (Total Saldo Awal Dompet + Total Pemasukan - Total Pengeluaran)
       const initialAccBalance = currentAccounts.reduce((sum, acc) => {
-        const bal = Number(acc.balance ?? acc.initial_balance ?? acc.amount ?? acc.jumlah ?? 0);
-        return sum + bal;
+        const rawBal = acc.balance ?? acc.initial_balance ?? acc.amount ?? acc.jumlah ?? 0;
+        return sum + Number(rawBal);
       }, 0);
 
       setTotalBalance(initialAccBalance + inc - exp);
@@ -129,19 +142,25 @@ export default function Page() {
     fetchAllData();
   }, [refreshKey]);
 
-  // Handler Simpan Dompet / Akun (Menyimpan ke kolom balance secara eksplisit)
+  // Handler Simpan Dompet
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingAccount(true);
     try {
-      const { error } = await supabase.from("accounts").insert([
-        {
-          name: accountName,
-          type: accountType,
-          balance: Number(initialBalance),
-        },
-      ]);
-      if (error) throw error;
+      const payload: any = {
+        name: accountName,
+        type: accountType,
+        balance: Number(initialBalance),
+      };
+
+      const { error } = await supabase.from("accounts").insert([payload]);
+      if (error) {
+        // Coba fallback jika kolom bernama initial_balance
+        delete payload.balance;
+        payload.initial_balance = Number(initialBalance);
+        const { error: err2 } = await supabase.from("accounts").insert([payload]);
+        if (err2) throw err2;
+      }
 
       setAccountName("");
       setInitialBalance("0");
@@ -151,6 +170,32 @@ export default function Page() {
       alert("Gagal menyimpan rekening: " + (err.message || JSON.stringify(err)));
     } finally {
       setLoadingAccount(false);
+    }
+  };
+
+  // Handler Simpan Target Tabungan
+  const handleGoalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoadingGoal(true);
+    try {
+      const { error } = await supabase.from("goals").insert([
+        {
+          title: goalTitle,
+          target_amount: Number(goalTarget),
+          current_amount: Number(goalCurrent || 0),
+        },
+      ]);
+      if (error) throw error;
+
+      setGoalTitle("");
+      setGoalTarget("");
+      setGoalCurrent("");
+      handleRefresh();
+      alert("Target keuangan berhasil disimpan!");
+    } catch (err: any) {
+      alert("Gagal menyimpan target: " + err.message);
+    } finally {
+      setLoadingGoal(false);
     }
   };
 
@@ -221,7 +266,7 @@ export default function Page() {
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-6 rounded-2xl shadow-lg space-y-1">
             <p className="text-xs font-medium text-indigo-200 uppercase tracking-wider">Total Saldo Keseluruhan</p>
             <h2 className="text-3xl font-extrabold">Rp {totalBalance.toLocaleString("id-ID")}</h2>
-            <p className="text-xs text-indigo-100 pt-1">Akumulasi saldo dompet, pemasukan & pengeluaran</p>
+            <p className="text-xs text-indigo-100 pt-1">Akumulasi dompet, pemasukan & pengeluaran</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-1">
@@ -240,11 +285,9 @@ export default function Page() {
 
       {/* Section 1: Manajemen Dompet & Akun */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">💳</span>
-            <h2 className="text-lg font-semibold text-gray-800">Tambah Rekening & Dompet</h2>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">💳</span>
+          <h2 className="text-lg font-semibold text-gray-800">Tambah Rekening & Dompet</h2>
         </div>
 
         <form onSubmit={handleAccountSubmit} className="space-y-4">
@@ -303,24 +346,109 @@ export default function Page() {
             <p className="text-xs text-gray-400">Belum ada dompet atau rekening yang ditambahkan.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {accountsList.map((acc) => (
-                <div key={acc.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50 space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-800 text-sm">{acc.name}</span>
-                    <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{acc.type}</span>
+              {accountsList.map((acc) => {
+                const bal = Number(acc.balance ?? acc.initial_balance ?? acc.amount ?? acc.jumlah ?? 0);
+                return (
+                  <div key={acc.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-gray-800 text-sm">{acc.name}</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{acc.type}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Saldo Dompet:</p>
+                    <p className="text-base font-bold text-indigo-600">Rp {bal.toLocaleString("id-ID")}</p>
                   </div>
-                  <p className="text-xs text-gray-500">Saldo Awal:</p>
-                  <p className="text-base font-bold text-indigo-600">
-                    Rp {Number(acc.balance ?? acc.initial_balance ?? acc.amount ?? acc.jumlah ?? 0).toLocaleString("id-ID")}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </section>
 
-      {/* Section 2: Form Pemasukan & Pengeluaran */}
+      {/* Section 2: Fitur Target Keuangan (Savings Goals) */}
+      <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🎯</span>
+          <h2 className="text-lg font-semibold text-gray-800">Target Keuangan & Tabungan</h2>
+        </div>
+
+        <form onSubmit={handleGoalSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nama Target</label>
+              <input
+                type="text"
+                value={goalTitle}
+                onChange={(e) => setGoalTitle(e.target.value)}
+                required
+                placeholder="Contoh: Beli Laptop, Liburan"
+                className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Jumlah Target (Rp)</label>
+              <input
+                type="number"
+                value={goalTarget}
+                onChange={(e) => setGoalTarget(e.target.value)}
+                required
+                placeholder="Contoh: 10000000"
+                className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Terkumpul Saat Ini (Rp)</label>
+              <input
+                type="number"
+                value={goalCurrent}
+                onChange={(e) => setGoalCurrent(e.target.value)}
+                placeholder="Contoh: 2000000"
+                className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={loadingGoal}
+            className={`w-full py-3 rounded-xl text-white font-medium text-sm transition ${
+              loadingGoal ? "bg-purple-300 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700 shadow-md shadow-purple-100"
+            }`}
+          >
+            {loadingGoal ? "Menyimpan Target..." : "Simpan Target Tabungan"}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Daftar Target Tabungan</h3>
+          {goalsList.length === 0 ? (
+            <p className="text-xs text-gray-400">Belum ada target tabungan yang dibuat.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {goalsList.map((goal) => {
+                const target = Number(goal.target_amount || 0);
+                const current = Number(goal.current_amount || 0);
+                const percent = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
+                return (
+                  <div key={goal.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-gray-800 text-sm">{goal.title}</span>
+                      <span className="text-xs font-bold text-purple-600">{percent}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: `${percent}%` }}></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Terkumpul: Rp {current.toLocaleString("id-ID")}</span>
+                      <span>Target: Rp {target.toLocaleString("id-ID")}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Section 3: Form Pemasukan & Pengeluaran */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-4">
           <h2 className="text-lg font-semibold text-emerald-700">💰 Catat Pemasukan</h2>
@@ -395,7 +523,7 @@ export default function Page() {
         </section>
       </div>
 
-      {/* Section 3: Grafik Analisis Tren Keuangan */}
+      {/* Section 4: Grafik Tren Keuangan */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Grafik Tren Pemasukan & Pengeluaran</h2>
         {chartData.length === 0 ? (
@@ -419,7 +547,7 @@ export default function Page() {
         )}
       </section>
 
-      {/* Section 4: Riwayat Transaksi */}
+      {/* Section 5: Riwayat Transaksi */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Riwayat Transaksi</h2>
         {transactions.length === 0 ? (
