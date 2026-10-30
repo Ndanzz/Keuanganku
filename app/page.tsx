@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 // ============================================================================
-// Kode Lengkap Keuanganku dengan Perbaikan Tipe Transaksi Huruf Kapital
+// Kode Lengkap Keuanganku - Integrasi Saldo Dompet & Transaksi Terpadu
 // ============================================================================
 export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -36,7 +36,7 @@ export default function Page() {
   const [expenseDesc, setExpenseDesc] = useState("");
   const [loadingExpense, setLoadingExpense] = useState(false);
 
-  // State: Transaksi & Statistik
+  // State: Transaksi & Statistik Saldo
   const [transactions, setTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
@@ -47,9 +47,10 @@ export default function Page() {
     setRefreshKey((prev) => prev + 1);
   };
 
-  // Fetch Data dari Supabase
+  // Fetch Data Akun & Transaksi dari Supabase
   useEffect(() => {
     const fetchAllData = async () => {
+      // 1. Ambil Data Dompet / Akun
       const { data: accData, error: accError } = await supabase
         .from("accounts")
         .select("*")
@@ -61,33 +62,29 @@ export default function Page() {
         currentAccounts = accData;
       }
 
+      // 2. Ambil Data Transaksi
       const { data: txData, error: txError } = await supabase
         .from("transactions")
         .select("*")
         .order("date", { ascending: false });
 
+      let inc = 0;
+      let exp = 0;
+
       if (!txError && txData) {
         setTransactions(txData);
 
-        let inc = 0;
-        let exp = 0;
-
         txData.forEach((tx) => {
           const amt = Number(tx.amount);
-          // Menyesuaikan pengecekan dengan huruf kapital dari database
-          if (tx.type === "Pemasukan" || tx.type === "pemasukan") {
+          const tType = String(tx.type || "").toLowerCase();
+          if (tType === "pemasukan") {
             inc += amt;
-          } else if (tx.type === "Pengeluaran" || tx.type === "pengeluaran") {
+          } else if (tType === "pengeluaran") {
             exp += amt;
           }
         });
 
-        setTotalIncome(inc);
-        setTotalExpense(exp);
-
-        const initialAccBalance = currentAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
-        setTotalBalance(initialAccBalance + inc - exp);
-
+        // Proses Data untuk Grafik Recharts per Bulan
         const grouped: { [key: string]: { pemasukan: number; pengeluaran: number } } = {};
 
         txData.forEach((tx) => {
@@ -100,9 +97,10 @@ export default function Page() {
             grouped[month] = { pemasukan: 0, pengeluaran: 0 };
           }
 
-          if (tx.type === "Pemasukan" || tx.type === "pemasukan") {
+          const tType = String(tx.type || "").toLowerCase();
+          if (tType === "pemasukan") {
             grouped[month].pemasukan += Number(tx.amount);
-          } else if (tx.type === "Pengeluaran" || tx.type === "pengeluaran") {
+          } else if (tType === "pengeluaran") {
             grouped[month].pengeluaran += Number(tx.amount);
           }
         });
@@ -115,6 +113,13 @@ export default function Page() {
 
         setChartData(formattedChartData);
       }
+
+      setTotalIncome(inc);
+      setTotalExpense(exp);
+
+      // 3. Akumulasi Total Saldo Keseluruhan (Saldo Awal Dompet + Total Pemasukan - Total Pengeluaran)
+      const initialAccBalance = currentAccounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+      setTotalBalance(initialAccBalance + inc - exp);
     };
 
     fetchAllData();
@@ -145,7 +150,7 @@ export default function Page() {
     }
   };
 
-  // Handler Simpan Pemasukan (Menggunakan tipe "Pemasukan")
+  // Handler Simpan Pemasukan
   const handleIncomeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingIncome(true);
@@ -172,7 +177,7 @@ export default function Page() {
     }
   };
 
-  // Handler Simpan Pengeluaran (Menggunakan tipe "Pengeluaran")
+  // Handler Simpan Pengeluaran
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingExpense(true);
@@ -212,7 +217,7 @@ export default function Page() {
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-6 rounded-2xl shadow-lg space-y-1">
             <p className="text-xs font-medium text-indigo-200 uppercase tracking-wider">Total Saldo Keseluruhan</p>
             <h2 className="text-3xl font-extrabold">Rp {totalBalance.toLocaleString("id-ID")}</h2>
-            <p className="text-xs text-indigo-100 pt-1">Akumulasi seluruh dompet & transaksi</p>
+            <p className="text-xs text-indigo-100 pt-1">Akumulasi saldo dompet, pemasukan & pengeluaran</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-1">
@@ -432,11 +437,11 @@ export default function Page() {
                     <td className="px-4 py-3 whitespace-nowrap">{new Date(tx.date).toLocaleDateString("id-ID")}</td>
                     <td className="px-4 py-3 font-medium text-gray-800">{tx.description || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-xs ${tx.type.toLowerCase() === 'pemasukan' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                        {tx.type.toUpperCase()}
+                      <span className={`px-2.5 py-1 rounded-full text-xs ${String(tx.type).toLowerCase() === 'pemasukan' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                        {String(tx.type).toUpperCase()}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 whitespace-nowrap font-bold ${tx.type.toLowerCase() === 'pemasukan' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <td className={`px-4 py-3 whitespace-nowrap font-bold ${String(tx.type).toLowerCase() === 'pemasukan' ? 'text-emerald-600' : 'text-rose-600'}`}>
                       Rp {Number(tx.amount).toLocaleString("id-ID")}
                     </td>
                   </tr>
