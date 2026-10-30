@@ -13,52 +13,40 @@ import {
   Legend,
 } from "recharts";
 
-// ============================================================================
-// Kode Lengkap Keuanganku dengan Fitur Ringkasan Total Saldo Keseluruhan
-// ============================================================================
 export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // ==========================================
-  // STATE: MANAJEMEN DOMPET & AKUN
-  // ==========================================
+  // State: Manajemen Dompet & Akun
   const [accountName, setAccountName] = useState("");
   const [accountType, setAccountType] = useState("Bank");
   const [initialBalance, setInitialBalance] = useState("0");
   const [loadingAccount, setLoadingAccount] = useState(false);
   const [accountsList, setAccountsList] = useState<any[]>([]);
 
-  // ==========================================
-  // STATE: FORM PEMASUKAN & PENGELUARAN
-  // ==========================================
+  // State: Form Pemasukan
   const [incomeAmount, setIncomeAmount] = useState("");
   const [incomeDesc, setIncomeDesc] = useState("");
   const [loadingIncome, setLoadingIncome] = useState(false);
 
+  // State: Form Pengeluaran
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDesc, setExpenseDesc] = useState("");
   const [loadingExpense, setLoadingExpense] = useState(false);
 
-  // ==========================================
-  // STATE: TRANSAKSI & STATISTIK KEUANGAN
-  // ==========================================
+  // State: Transaksi & Statistik
   const [transactions, setTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
 
-  // Trigger Refresh Data Secara Global
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
-  // ==========================================
-  // FETCH DATA & HITUNG SALDO KESELURUHAN
-  // ==========================================
+  // Fetch Data dari Supabase
   useEffect(() => {
     const fetchAllData = async () => {
-      // 1. Ambil Data Akun / Dompet
       const { data: accData, error: accError } = await supabase
         .from("accounts")
         .select("*")
@@ -70,7 +58,6 @@ export default function Page() {
         currentAccounts = accData;
       }
 
-      // 2. Ambil Data Transaksi
       const { data: txData, error: txError } = await supabase
         .from("transactions")
         .select("*")
@@ -79,7 +66,6 @@ export default function Page() {
       if (!txError && txData) {
         setTransactions(txData);
 
-        // Hitung Total Pemasukan dan Pengeluaran Keseluruhan
         let inc = 0;
         let exp = 0;
 
@@ -95,11 +81,9 @@ export default function Page() {
         setTotalIncome(inc);
         setTotalExpense(exp);
 
-        // Hitung Total Saldo (Total Saldo Awal Dompet + Pemasukan - Pengeluaran)
         const initialAccBalance = currentAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
         setTotalBalance(initialAccBalance + inc - exp);
 
-        // Proses Data untuk Grafik Recharts per Bulan
         const grouped: { [key: string]: { pemasukan: number; pengeluaran: number } } = {};
 
         txData.forEach((tx) => {
@@ -132,9 +116,7 @@ export default function Page() {
     fetchAllData();
   }, [refreshKey]);
 
-  // ==========================================
-  // HANDLER: SIMPAN DOMPET / AKUN
-  // ==========================================
+  // Handler Simpan Dompet / Akun
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingAccount(true);
@@ -159,9 +141,7 @@ export default function Page() {
     }
   };
 
-  // ==========================================
-  // HANDLER: SIMPAN PEMASUKAN
-  // ==========================================
+  // Handler Simpan Pemasukan (Dengan kolom category)
   const handleIncomeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingIncome(true);
@@ -171,6 +151,7 @@ export default function Page() {
           amount: Number(incomeAmount),
           type: "pemasukan",
           description: incomeDesc || "Pemasukan",
+          category: "Umum", // <--- Ditambahkan untuk mengatasi not-null constraint kolom category
           date: new Date().toISOString(),
         },
       ]);
@@ -187,9 +168,7 @@ export default function Page() {
     }
   };
 
-  // ==========================================
-  // HANDLER: SIMPAN PENGELUARAN
-  // ==========================================
+  // Handler Simpan Pengeluaran (Dengan kolom category)
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingExpense(true);
@@ -199,6 +178,7 @@ export default function Page() {
           amount: Number(expenseAmount),
           type: "pengeluaran",
           description: expenseDesc || "Pengeluaran",
+          category: "Umum", // <--- Ditambahkan untuk mengatasi not-null constraint kolom category
           date: new Date().toISOString(),
         },
       ]);
@@ -217,16 +197,13 @@ export default function Page() {
 
   return (
     <main className="p-8 max-w-7xl mx-auto space-y-8 bg-gray-50 min-h-screen">
-      {/* ========================================== */}
-      {/* HEADER & RINGKASAN TOTAL SALDO KESELURUHAN */}
-      {/* ========================================== */}
+      {/* Header & Ringkasan Total Saldo Keseluruhan */}
       <header className="space-y-4">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Keuanganku</h1>
           <p className="text-sm text-gray-600">Kelola dompet, catat pemasukan & pengeluaran, serta pantau tren finansialmu.</p>
         </div>
 
-        {/* Kartu Ringkasan Saldo Keseluruhan */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-6 rounded-2xl shadow-lg space-y-1">
             <p className="text-xs font-medium text-indigo-200 uppercase tracking-wider">Total Saldo Keseluruhan</p>
@@ -248,9 +225,7 @@ export default function Page() {
         </div>
       </header>
 
-      {/* ========================================== */}
-      {/* SECTION 1: MANAJEMEN DOMPET & AKUN         */}
-      {/* ========================================== */}
+      {/* Section 1: Manajemen Dompet & Akun */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -309,7 +284,6 @@ export default function Page() {
           </button>
         </form>
 
-        {/* Daftar Dompet Tersimpan */}
         <div className="mt-6 pt-6 border-t border-gray-100">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Daftar Dompet & Akun Terdaftar</h3>
           {accountsList.length === 0 ? (
@@ -331,11 +305,8 @@ export default function Page() {
         </div>
       </section>
 
-      {/* ========================================== */}
-      {/* SECTION 2: FORM PEMASUKAN & PENGELUARAN    */}
-      {/* ========================================== */}
+      {/* Section 2: Form Pemasukan & Pengeluaran */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Form Pemasukan */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-4">
           <h2 className="text-lg font-semibold text-emerald-700">💰 Catat Pemasukan</h2>
           <form onSubmit={handleIncomeSubmit} className="space-y-4">
@@ -372,7 +343,6 @@ export default function Page() {
           </form>
         </section>
 
-        {/* Form Pengeluaran */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-rose-100 space-y-4">
           <h2 className="text-lg font-semibold text-rose-700">💸 Catat Pengeluaran</h2>
           <form onSubmit={handleExpenseSubmit} className="space-y-4">
@@ -410,9 +380,7 @@ export default function Page() {
         </section>
       </div>
 
-      {/* ========================================== */}
-      {/* SECTION 3: GRAFIK ANALISIS TREN KEUANGAN   */}
-      {/* ========================================== */}
+      {/* Section 3: Grafik Analisis Tren Keuangan */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Grafik Tren Pemasukan & Pengeluaran</h2>
         {chartData.length === 0 ? (
@@ -436,9 +404,7 @@ export default function Page() {
         )}
       </section>
 
-      {/* ========================================== */}
-      {/* SECTION 4: RIWAYAT TRANSAKSI               */}
-      {/* ========================================== */}
+      {/* Section 4: Riwayat Transaksi */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Riwayat Transaksi</h2>
         {transactions.length === 0 ? (
