@@ -49,6 +49,7 @@ export default function Page() {
         {
           amount: Number(incomeAmount),
           type: "pemasukan",
+          description: "Pemasukan",
           date: new Date().toISOString(),
         },
       ]);
@@ -72,6 +73,7 @@ export default function Page() {
         {
           amount: Number(expenseAmount),
           type: "pengeluaran",
+          description: "Pengeluaran",
           date: new Date().toISOString(),
         },
       ]);
