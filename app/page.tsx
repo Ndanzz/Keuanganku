@@ -28,7 +28,7 @@ export default function Page() {
       {/* Bagian Manajemen Dompet / Akun */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan Dompet & Akun</h2>
-        <AccountSection onSuccess={handleSuccess} onCancel={handleCancel} />
+        <AccountSection onSuccess={handleSuccess} />
       </section>
 
       {/* Bagian Komponen Grafik Analisis Tren Keuangan */}
