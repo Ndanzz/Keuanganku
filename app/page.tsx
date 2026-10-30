@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 // ============================================================================
-// Kode Lengkap Keuanganku - Integrasi Saldo Dompet & Transaksi Terpadu
+// Kode Lengkap Keuanganku - Fleksibel Deteksi Kolom Saldo Dompet
 // ============================================================================
 export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -75,7 +75,7 @@ export default function Page() {
         setTransactions(txData);
 
         txData.forEach((tx) => {
-          const amt = Number(tx.amount);
+          const amt = Number(tx.amount || 0);
           const tType = String(tx.type || "").toLowerCase();
           if (tType === "pemasukan") {
             inc += amt;
@@ -99,9 +99,9 @@ export default function Page() {
 
           const tType = String(tx.type || "").toLowerCase();
           if (tType === "pemasukan") {
-            grouped[month].pemasukan += Number(tx.amount);
+            grouped[month].pemasukan += Number(tx.amount || 0);
           } else if (tType === "pengeluaran") {
-            grouped[month].pengeluaran += Number(tx.amount);
+            grouped[month].pengeluaran += Number(tx.amount || 0);
           }
         });
 
@@ -117,15 +117,19 @@ export default function Page() {
       setTotalIncome(inc);
       setTotalExpense(exp);
 
-      // 3. Akumulasi Total Saldo Keseluruhan (Saldo Awal Dompet + Total Pemasukan - Total Pengeluaran)
-      const initialAccBalance = currentAccounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+      // 3. Akumulasi Total Saldo Keseluruhan (Mendukung berbagai nama kolom saldo di database)
+      const initialAccBalance = currentAccounts.reduce((sum, acc) => {
+        const bal = Number(acc.balance ?? acc.initial_balance ?? acc.amount ?? acc.jumlah ?? 0);
+        return sum + bal;
+      }, 0);
+
       setTotalBalance(initialAccBalance + inc - exp);
     };
 
     fetchAllData();
   }, [refreshKey]);
 
-  // Handler Simpan Dompet / Akun
+  // Handler Simpan Dompet / Akun (Menyimpan ke kolom balance secara eksplisit)
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingAccount(true);
@@ -306,7 +310,9 @@ export default function Page() {
                     <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{acc.type}</span>
                   </div>
                   <p className="text-xs text-gray-500">Saldo Awal:</p>
-                  <p className="text-base font-bold text-indigo-600">Rp {Number(acc.balance).toLocaleString("id-ID")}</p>
+                  <p className="text-base font-bold text-indigo-600">
+                    Rp {Number(acc.balance ?? acc.initial_balance ?? acc.amount ?? acc.jumlah ?? 0).toLocaleString("id-ID")}
+                  </p>
                 </div>
               ))}
             </div>
