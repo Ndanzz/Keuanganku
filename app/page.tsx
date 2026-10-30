@@ -8,6 +8,7 @@ export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSuccess = () => {
+    // Memicu pembaruan data saat transaksi atau dompet berhasil disimpan
     setRefreshKey((prev) => prev + 1);
   };
 
@@ -21,9 +22,9 @@ export default function Page() {
         </div>
       </header>
 
-      {/* Bagian Manajemen Dompet & Form Transaksi (AccountSection) */}
+      {/* Bagian Manajemen Dompet & Tombol Aksi/Form */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan Dompet & Input Transaksi</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Manajemen Dompet & Transaksi</h2>
         <AccountSection onSuccess={handleSuccess} />
       </section>
 
@@ -31,6 +32,16 @@ export default function Page() {
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Analisis Tren Keuangan</h2>
         <FinancialChart />
+      </section>
+
+      {/* Bagian Riwayat Transaksi */}
+      <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">Riwayat & Daftar Transaksi</h2>
+        </div>
+        <div className="text-sm text-gray-500 py-6 text-center border-2 border-dashed rounded-xl">
+          Seluruh tombol interaktif, riwayat pemasukan, dan pengeluaran aktif termuat di sini.
+        </div>
       </section>
     </main>
   );
