@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 // ============================================================================
-// KOMPONEN UTAMA HALAMAN KEUANGANKU (600+ BARIS KOMPREHENSIF)
+// Kode Lengkap Keuanganku dengan Fitur Ringkasan Total Saldo Keseluruhan
 // ============================================================================
 export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -29,24 +29,24 @@ export default function Page() {
   const [accountsList, setAccountsList] = useState<any[]>([]);
 
   // ==========================================
-  // STATE: FORM PEMASUKAN
+  // STATE: FORM PEMASUKAN & PENGELUARAN
   // ==========================================
   const [incomeAmount, setIncomeAmount] = useState("");
   const [incomeDesc, setIncomeDesc] = useState("");
   const [loadingIncome, setLoadingIncome] = useState(false);
 
-  // ==========================================
-  // STATE: FORM PENGELUARAN
-  // ==========================================
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDesc, setExpenseDesc] = useState("");
   const [loadingExpense, setLoadingExpense] = useState(false);
 
   // ==========================================
-  // STATE: TRANSAKSI & GRAFIK ANALISIS
+  // STATE: TRANSAKSI & STATISTIK KEUANGAN
   // ==========================================
   const [transactions, setTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpense, setTotalExpense] = useState(0);
 
   // Trigger Refresh Data Secara Global
   const handleRefresh = () => {
@@ -54,21 +54,23 @@ export default function Page() {
   };
 
   // ==========================================
-  // FETCH DATA DARI SUPABASE DATABASE
+  // FETCH DATA & HITUNG SALDO KESELURUHAN
   // ==========================================
   useEffect(() => {
     const fetchAllData = async () => {
-      // 1. Ambil Data Akun / Dompet dari Supabase
+      // 1. Ambil Data Akun / Dompet
       const { data: accData, error: accError } = await supabase
         .from("accounts")
         .select("*")
         .order("id", { ascending: false });
 
+      let currentAccounts = [];
       if (!accError && accData) {
         setAccountsList(accData);
+        currentAccounts = accData;
       }
 
-      // 2. Ambil Data Transaksi dari Supabase
+      // 2. Ambil Data Transaksi
       const { data: txData, error: txError } = await supabase
         .from("transactions")
         .select("*")
@@ -77,7 +79,27 @@ export default function Page() {
       if (!txError && txData) {
         setTransactions(txData);
 
-        // Proses Data untuk Grafik Recharts (Dikelompokkan per Bulan)
+        // Hitung Total Pemasukan dan Pengeluaran Keseluruhan
+        let inc = 0;
+        let exp = 0;
+
+        txData.forEach((tx) => {
+          const amt = Number(tx.amount);
+          if (tx.type === "pemasukan") {
+            inc += amt;
+          } else if (tx.type === "pengeluaran") {
+            exp += amt;
+          }
+        });
+
+        setTotalIncome(inc);
+        setTotalExpense(exp);
+
+        // Hitung Total Saldo (Total Saldo Awal Dompet + Pemasukan - Pengeluaran)
+        const initialAccBalance = currentAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+        setTotalBalance(initialAccBalance + inc - exp);
+
+        // Proses Data untuk Grafik Recharts per Bulan
         const grouped: { [key: string]: { pemasukan: number; pengeluaran: number } } = {};
 
         txData.forEach((tx) => {
@@ -195,17 +217,40 @@ export default function Page() {
 
   return (
     <main className="p-8 max-w-7xl mx-auto space-y-8 bg-gray-50 min-h-screen">
-      {/* ================================================================= */}
-      {/* HEADER UTAMA APLIKASI KEUANGANKU                                    */}
-      {/* ================================================================= */}
-      <header className="space-y-1">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Keuanganku</h1>
-        <p className="text-sm text-gray-600">Kelola dompet, catat pemasukan & pengeluaran, serta pantau tren finansialmu.</p>
+      {/* ========================================== */}
+      {/* HEADER & RINGKASAN TOTAL SALDO KESELURUHAN */}
+      {/* ========================================== */}
+      <header className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Keuanganku</h1>
+          <p className="text-sm text-gray-600">Kelola dompet, catat pemasukan & pengeluaran, serta pantau tren finansialmu.</p>
+        </div>
+
+        {/* Kartu Ringkasan Saldo Keseluruhan */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-6 rounded-2xl shadow-lg space-y-1">
+            <p className="text-xs font-medium text-indigo-200 uppercase tracking-wider">Total Saldo Keseluruhan</p>
+            <h2 className="text-3xl font-extrabold">Rp {totalBalance.toLocaleString("id-ID")}</h2>
+            <p className="text-xs text-indigo-100 pt-1">Akumulasi seluruh dompet & transaksi</p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-1">
+            <p className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Total Pemasukan</p>
+            <h2 className="text-2xl font-bold text-emerald-700">Rp {totalIncome.toLocaleString("id-ID")}</h2>
+            <p className="text-xs text-gray-400 pt-1">Keseluruhan pemasukan tercatat</p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-rose-100 space-y-1">
+            <p className="text-xs font-medium text-rose-600 uppercase tracking-wider">Total Pengeluaran</p>
+            <h2 className="text-2xl font-bold text-rose-700">Rp {totalExpense.toLocaleString("id-ID")}</h2>
+            <p className="text-xs text-gray-400 pt-1">Keseluruhan pengeluaran tercatat</p>
+          </div>
+        </div>
       </header>
 
-      {/* ================================================================= */}
-      {/* SECTION 1: MANAJEMEN DOMPET & AKUN (LENGKAP DENGAN DAFTAR KARTU)    */}
-      {/* ================================================================= */}
+      {/* ========================================== */}
+      {/* SECTION 1: MANAJEMEN DOMPET & AKUN         */}
+      {/* ========================================== */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -277,7 +322,7 @@ export default function Page() {
                     <span className="font-semibold text-gray-800 text-sm">{acc.name}</span>
                     <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{acc.type}</span>
                   </div>
-                  <p className="text-xs text-gray-500">Saldo Awal / Saat Ini:</p>
+                  <p className="text-xs text-gray-500">Saldo Awal:</p>
                   <p className="text-base font-bold text-indigo-600">Rp {Number(acc.balance).toLocaleString("id-ID")}</p>
                 </div>
               ))}
@@ -286,9 +331,9 @@ export default function Page() {
         </div>
       </section>
 
-      {/* ================================================================= */}
-      {/* SECTION 2: FORM PEMASUKAN & PENGELUARAN TERPISAH                  */}
-      {/* ================================================================= */}
+      {/* ========================================== */}
+      {/* SECTION 2: FORM PEMASUKAN & PENGELUARAN    */}
+      {/* ========================================== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Form Pemasukan */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-4">
@@ -365,9 +410,9 @@ export default function Page() {
         </section>
       </div>
 
-      {/* ================================================================= */}
-      {/* SECTION 3: GRAFIK ANALISIS TREN KEUANGAN RECHARTS                 */}
-      {/* ================================================================= */}
+      {/* ========================================== */}
+      {/* SECTION 3: GRAFIK ANALISIS TREN KEUANGAN   */}
+      {/* ========================================== */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Grafik Tren Pemasukan & Pengeluaran</h2>
         {chartData.length === 0 ? (
@@ -391,9 +436,9 @@ export default function Page() {
         )}
       </section>
 
-      {/* ================================================================= */}
-      {/* SECTION 4: RIWAYAT TRANSAKSI LENGKAP                              */}
-      {/* ================================================================= */}
+      {/* ========================================== */}
+      {/* SECTION 4: RIWAYAT TRANSAKSI               */}
+      {/* ========================================== */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Riwayat Transaksi</h2>
         {transactions.length === 0 ? (
