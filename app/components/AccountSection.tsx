@@ -27,9 +27,9 @@ export default function AccountSection({ onSuccess }: { onSuccess?: () => void }
       setAccountName("");
       setInitialBalance("0");
       if (onSuccess) onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Gagal menyimpan rekening:", err);
-      alert("Terjadi kesalahan saat menyimpan rekening.");
+      alert("Error Supabase: " + (err.message || JSON.stringify(err)));
     } finally {
       setLoading(false);
     }
