@@ -1,77 +1,104 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../lib/supabase"; // Sesuaikan jalur impor Supabase
+import { supabase } from "../../lib/supabase";
 
-export default function TransactionForm({ onSuccess }: { onSuccess?: () => void }) {
-  const [amount, setAmount] = useState("");
-  const [type, setType] = useState("pemasukan");
+export default function AccountSection({ onSuccess }: { onSuccess?: () => void }) {
+  const [accountName, setAccountName] = useState("");
+  const [accountType, setAccountType] = useState("Bank");
+  const [initialBalance, setInitialBalance] = useState("0");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); // Tombol dikunci saat proses berjalan
+    setLoading(true);
 
     try {
-      // Proses simpan data ke Supabase
-      const { error } = await supabase.from("transactions").insert([
+      const { error } = await supabase.from("accounts").insert([
         {
-          amount: Number(amount),
-          type: type,
-          date: new Date().toISOString(),
+          name: accountName,
+          type: accountType,
+          balance: Number(initialBalance),
         },
       ]);
 
       if (error) throw error;
 
-      // Reset form setelah berhasil
-      setAmount("");
+      setAccountName("");
+      setInitialBalance("0");
       if (onSuccess) onSuccess();
     } catch (err) {
-      console.error("Gagal menyimpan transaksi:", err);
-      alert("Terjadi kesalahan saat menyimpan data.");
+      console.error("Gagal menyimpan rekening:", err);
+      alert("Terjadi kesalahan saat menyimpan rekening.");
     } finally {
-      setLoading(false); // <--- KUNCI UTAMA: Memastikan tombol aktif kembali
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h3 className="text-lg font-semibold text-gray-800">Tambah Transaksi Baru</h3>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah (Rp)</label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          required
-          className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          placeholder="Contoh: 50000"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Transaksi</label>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">💳</span>
+          <h3 className="text-md font-semibold text-gray-800">Tambah Rekening & Dompet</h3>
+        </div>
+        <button
+          type="button"
+          className="text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-xl transition"
         >
-          <option value="pemasukan">Pemasukan</option>
-          <option value="pengeluaran">Pengeluaran</option>
-        </select>
+          Kembali
+        </button>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className={`w-full py-3 rounded-xl text-white font-medium transition ${
-          loading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"
-        }`}
-      >
-        {loading ? "Menyimpan..." : "Simpan Transaksi"}
-      </button>
-    </form>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Nama Dompet/Bank</label>
+            <input
+              type="text"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              required
+              placeholder="Contoh: BCA, Gopay, Kas"
+              className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Tipe</label>
+            <select
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value)}
+              className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+            >
+              <option value="Bank">Bank</option>
+              <option value="E-Wallet">E-Wallet</option>
+              <option value="Cash">Cash / Tunai</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Saldo Awal</label>
+            <input
+              type="number"
+              value={initialBalance}
+              onChange={(e) => setInitialBalance(e.target.value)}
+              required
+              className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full py-3 rounded-xl text-white font-medium text-sm transition ${
+            loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100"
+          }`}
+        >
+          {loading ? "Menyimpan Dompet..." : "Simpan Dompet"}
+        </button>
+      </form>
+    </div>
   );
 }
