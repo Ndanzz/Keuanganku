@@ -13,6 +13,9 @@ import {
   Legend,
 } from "recharts";
 
+// ============================================================================
+// Kode Lengkap Keuanganku dengan Perbaikan Tipe Transaksi Huruf Kapital
+// ============================================================================
 export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -71,9 +74,10 @@ export default function Page() {
 
         txData.forEach((tx) => {
           const amt = Number(tx.amount);
-          if (tx.type === "pemasukan") {
+          // Menyesuaikan pengecekan dengan huruf kapital dari database
+          if (tx.type === "Pemasukan" || tx.type === "pemasukan") {
             inc += amt;
-          } else if (tx.type === "pengeluaran") {
+          } else if (tx.type === "Pengeluaran" || tx.type === "pengeluaran") {
             exp += amt;
           }
         });
@@ -96,9 +100,9 @@ export default function Page() {
             grouped[month] = { pemasukan: 0, pengeluaran: 0 };
           }
 
-          if (tx.type === "pemasukan") {
+          if (tx.type === "Pemasukan" || tx.type === "pemasukan") {
             grouped[month].pemasukan += Number(tx.amount);
-          } else if (tx.type === "pengeluaran") {
+          } else if (tx.type === "Pengeluaran" || tx.type === "pengeluaran") {
             grouped[month].pengeluaran += Number(tx.amount);
           }
         });
@@ -141,7 +145,7 @@ export default function Page() {
     }
   };
 
-  // Handler Simpan Pemasukan (Dengan kolom category)
+  // Handler Simpan Pemasukan (Menggunakan tipe "Pemasukan")
   const handleIncomeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingIncome(true);
@@ -149,9 +153,9 @@ export default function Page() {
       const { error } = await supabase.from("transactions").insert([
         {
           amount: Number(incomeAmount),
-          type: "pemasukan",
+          type: "Pemasukan",
           description: incomeDesc || "Pemasukan",
-          category: "Umum", // <--- Ditambahkan untuk mengatasi not-null constraint kolom category
+          category: "Umum",
           date: new Date().toISOString(),
         },
       ]);
@@ -168,7 +172,7 @@ export default function Page() {
     }
   };
 
-  // Handler Simpan Pengeluaran (Dengan kolom category)
+  // Handler Simpan Pengeluaran (Menggunakan tipe "Pengeluaran")
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingExpense(true);
@@ -176,9 +180,9 @@ export default function Page() {
       const { error } = await supabase.from("transactions").insert([
         {
           amount: Number(expenseAmount),
-          type: "pengeluaran",
+          type: "Pengeluaran",
           description: expenseDesc || "Pengeluaran",
-          category: "Umum", // <--- Ditambahkan untuk mengatasi not-null constraint kolom category
+          category: "Umum",
           date: new Date().toISOString(),
         },
       ]);
@@ -428,11 +432,11 @@ export default function Page() {
                     <td className="px-4 py-3 whitespace-nowrap">{new Date(tx.date).toLocaleDateString("id-ID")}</td>
                     <td className="px-4 py-3 font-medium text-gray-800">{tx.description || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-xs ${tx.type === 'pemasukan' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                      <span className={`px-2.5 py-1 rounded-full text-xs ${tx.type.toLowerCase() === 'pemasukan' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                         {tx.type.toUpperCase()}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 whitespace-nowrap font-bold ${tx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <td className={`px-4 py-3 whitespace-nowrap font-bold ${tx.type.toLowerCase() === 'pemasukan' ? 'text-emerald-600' : 'text-rose-600'}`}>
                       Rp {Number(tx.amount).toLocaleString("id-ID")}
                     </td>
                   </tr>
