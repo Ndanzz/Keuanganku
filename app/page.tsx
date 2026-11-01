@@ -169,7 +169,7 @@ export default function Page() {
     }
   };
 
-  // Handler Simpan Target Tabungan (Ditambahkan user_id agar lolos not-null constraint)
+  // Handler Simpan Target Tabungan (Tanpa user_id agar cocok dengan tipe UUID)
   const handleGoalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingGoal(true);
@@ -179,7 +179,6 @@ export default function Page() {
           title: goalTitle,
           target_amount: Number(goalTarget),
           current_amount: Number(goalCurrent || 0),
-          user_id: "public-user", // <--- Mengatasi error null value in column user_id
         },
       ]);
       if (error) throw error;
