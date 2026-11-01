@@ -130,7 +130,7 @@ export default function Page() {
       setTotalIncome(inc);
       setTotalExpense(exp);
 
-      // Hitung Total Saldo Akumulasi Seluruh Dompet (Mendukung semua varian nama kolom di database)
+      // 4. Hitung Total Saldo Akumulasi Seluruh Dompet (Mendukung semua varian nama kolom)
       let initialAccBalance = 0;
       currentAccounts.forEach((acc) => {
         const bal = Number(
@@ -145,31 +145,32 @@ export default function Page() {
         initialAccBalance += bal;
       });
 
-      // Total Saldo Keseluruhan = Saldo Dompet + Total Pemasukan - Total Pengeluaran
+      // Total Saldo Keseluruhan = Akumulasi Saldo Dompet + Total Pemasukan - Total Pengeluaran
       setTotalBalance(initialAccBalance + inc - exp);
     };
 
     fetchAllData();
   }, [refreshKey]);
 
-  // Handler Simpan Dompet
+  // Handler Simpan Dompet (Menyimpan ke balance dan initial_balance sekaligus agar kompatibel)
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingAccount(true);
     try {
-      const { error } = await supabase.from("accounts").insert([
-        {
-          name: accountName,
-          type: accountType,
-          balance: Number(initialBalance),
-        },
-      ]);
+      const payload = {
+        name: accountName,
+        type: accountType,
+        balance: Number(initialBalance),
+        initial_balance: Number(initialBalance),
+      };
+
+      const { error } = await supabase.from("accounts").insert([payload]);
       if (error) throw error;
 
       setAccountName("");
       setInitialBalance("0");
       handleRefresh();
-      alert("Dompet/Rekening berhasil disimpan!");
+      alert("Dompet/Rekening berhasil disimpan dan ditambahkan ke total saldo!");
     } catch (err: any) {
       alert("Gagal menyimpan rekening: " + (err.message || JSON.stringify(err)));
     } finally {
