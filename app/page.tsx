@@ -133,14 +133,7 @@ export default function Page() {
       // Hitung Total Saldo Akumulasi Seluruh Dompet
       let initialAccBalance = 0;
       currentAccounts.forEach((acc) => {
-        const bal = Number(
-          acc.balance ??
-          acc.amount ??
-          acc.jumlah ??
-          acc.saldo ??
-          acc.value ??
-          0
-        );
+        const bal = Number(acc.balance ?? acc.amount ?? acc.jumlah ?? acc.saldo ?? 0);
         initialAccBalance += bal;
       });
 
@@ -151,7 +144,7 @@ export default function Page() {
     fetchAllData();
   }, [refreshKey]);
 
-  // Handler Simpan Dompet (Hanya mengirimkan kolom standar yang valid)
+  // Handler Simpan Dompet
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingAccount(true);
