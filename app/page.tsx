@@ -30,6 +30,9 @@ export default function Page() {
   const [loadingGoal, setLoadingGoal] = useState(false);
   const [goalsList, setGoalsList] = useState<any[]>([]);
 
+  // State untuk input tambah nominal tabungan ke target tertentu
+  const [addAmounts, setAddAmounts] = useState<{ [key: string]: string }>({});
+
   // State: Form Pemasukan & Pengeluaran
   const [incomeAmount, setIncomeAmount] = useState("");
   const [incomeDesc, setIncomeDesc] = useState("");
@@ -137,7 +140,6 @@ export default function Page() {
         initialAccBalance += bal;
       });
 
-      // Total Saldo Keseluruhan = Akumulasi Saldo Dompet + Total Pemasukan - Total Pengeluaran
       setTotalBalance(initialAccBalance + inc - exp);
     };
 
@@ -169,7 +171,7 @@ export default function Page() {
     }
   };
 
-  // Handler Simpan Target Tabungan (Tanpa user_id agar cocok dengan tipe UUID)
+  // Handler Simpan Target Tabungan Baru
   const handleGoalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingGoal(true);
@@ -192,6 +194,33 @@ export default function Page() {
       alert("Gagal menyimpan target: " + err.message);
     } finally {
       setLoadingGoal(false);
+    }
+  };
+
+  // Handler Menambahkan Saldo ke Target Tertentu
+  const handleAddToGoal = async (goalId: string, currentAmount: number) => {
+    const addVal = Number(addAmounts[goalId] || 0);
+    if (addVal <= 0) {
+      alert("Masukkan nominal penambahan yang valid!");
+      return;
+    }
+
+    const newCurrent = currentAmount + addVal;
+
+    try {
+      const { error } = await supabase
+        .from("goals")
+        .update({ current_amount: newCurrent })
+        .eq("id", goalId);
+
+      if (error) throw error;
+
+      // Bersihkan input field untuk target ini
+      setAddAmounts({ ...addAmounts, [goalId]: "" });
+      handleRefresh();
+      alert("Berhasil menambahkan saldo ke target tabungan!");
+    } catch (err: any) {
+      alert("Gagal memperbarui target: " + err.message);
     }
   };
 
@@ -360,7 +389,7 @@ export default function Page() {
         </div>
       </section>
 
-      {/* Section 2: Fitur Target Keuangan (Savings Goals) */}
+      {/* Section 2: Fitur Target Keuangan (Savings Goals & Tambah Saldo Target) */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
         <div className="flex items-center gap-2">
           <span className="text-xl">🎯</span>
@@ -435,6 +464,23 @@ export default function Page() {
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>Terkumpul: Rp {current.toLocaleString("id-ID")}</span>
                       <span>Target: Rp {target.toLocaleString("id-ID")}</span>
+                    </div>
+
+                    {/* Input dan Tombol Tambah Saldo ke Target Ini */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-200">
+                      <input
+                        type="number"
+                        placeholder="Tambah nominal (Rp)"
+                        value={addAmounts[goal.id] || ""}
+                        onChange={(e) => setAddAmounts({ ...addAmounts, [goal.id]: e.target.value })}
+                        className="w-full px-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      />
+                      <button
+                        onClick={() => handleAddToGoal(goal.id, current)}
+                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg whitespace-nowrap shadow-sm"
+                      >
+                        Tambah Tabungan
+                      </button>
                     </div>
                   </div>
                 );
