@@ -45,13 +45,12 @@ export default function Page() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
-  const [debugAccountsSum, setDebugAccountsSum] = useState(0);
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
-  // Fetch Semua Data dari Supabase
+  // Fetch Semua Data secara Akurat dari Supabase
   useEffect(() => {
     const fetchAllData = async () => {
       // 1. Ambil Data Dompet
@@ -131,10 +130,10 @@ export default function Page() {
       setTotalIncome(inc);
       setTotalExpense(exp);
 
-      // Hitung Total Saldo Dompet dengan memeriksa seluruh kemungkinan nama kolom
-      let sumAcc = 0;
+      // Hitung Total Saldo Akumulasi Seluruh Dompet (Mendukung semua varian nama kolom di database)
+      let initialAccBalance = 0;
       currentAccounts.forEach((acc) => {
-        const val = Number(
+        const bal = Number(
           acc.balance ??
           acc.initial_balance ??
           acc.amount ??
@@ -143,11 +142,11 @@ export default function Page() {
           acc.value ??
           0
         );
-        sumAcc += val;
+        initialAccBalance += bal;
       });
 
-      setDebugAccountsSum(sumAcc);
-      setTotalBalance(sumAcc + inc - exp);
+      // Total Saldo Keseluruhan = Saldo Dompet + Total Pemasukan - Total Pengeluaran
+      setTotalBalance(initialAccBalance + inc - exp);
     };
 
     fetchAllData();
@@ -271,7 +270,7 @@ export default function Page() {
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-6 rounded-2xl shadow-lg space-y-1">
             <p className="text-xs font-medium text-indigo-200 uppercase tracking-wider">Total Saldo Keseluruhan</p>
             <h2 className="text-3xl font-extrabold">Rp {totalBalance.toLocaleString("id-ID")}</h2>
-            <p className="text-xs text-indigo-100 pt-1">Akumulasi Dompet (Rp {debugAccountsSum.toLocaleString("id-ID")}) + Transaksi</p>
+            <p className="text-xs text-indigo-100 pt-1">Akumulasi saldo dompet, pemasukan & pengeluaran</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-1">
@@ -352,17 +351,23 @@ export default function Page() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {accountsList.map((acc) => {
-                const bal = Number(acc.balance ?? acc.initial_balance ?? acc.amount ?? acc.jumlah ?? acc.saldo ?? acc.value ?? 0);
+                const bal = Number(
+                  acc.balance ??
+                  acc.initial_balance ??
+                  acc.amount ??
+                  acc.jumlah ??
+                  acc.saldo ??
+                  acc.value ??
+                  0
+                );
                 return (
                   <div key={acc.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50 space-y-1">
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-gray-800 text-sm">{acc.name}</span>
                       <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{acc.type}</span>
                     </div>
-                    <p className="text-xs text-gray-500">Saldo Terdeteksi:</p>
+                    <p className="text-xs text-gray-500">Saldo Dompet:</p>
                     <p className="text-base font-bold text-indigo-600">Rp {bal.toLocaleString("id-ID")}</p>
-                    {/* Debug info objek asli database */}
-                    <p className="text-[10px] text-gray-400 pt-1 font-mono">Raw: {JSON.stringify(acc)}</p>
                   </div>
                 );
               })}
