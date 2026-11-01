@@ -50,7 +50,7 @@ export default function Page() {
     setRefreshKey((prev) => prev + 1);
   };
 
-  // Fetch Semua Data secara Akurat dari Supabase
+  // Fetch Semua Data dari Supabase
   useEffect(() => {
     const fetchAllData = async () => {
       // 1. Ambil Data Dompet
@@ -130,12 +130,11 @@ export default function Page() {
       setTotalIncome(inc);
       setTotalExpense(exp);
 
-      // 4. Hitung Total Saldo Akumulasi Seluruh Dompet (Mendukung semua varian nama kolom)
+      // Hitung Total Saldo Akumulasi Seluruh Dompet
       let initialAccBalance = 0;
       currentAccounts.forEach((acc) => {
         const bal = Number(
           acc.balance ??
-          acc.initial_balance ??
           acc.amount ??
           acc.jumlah ??
           acc.saldo ??
@@ -152,25 +151,24 @@ export default function Page() {
     fetchAllData();
   }, [refreshKey]);
 
-  // Handler Simpan Dompet (Menyimpan ke balance dan initial_balance sekaligus agar kompatibel)
+  // Handler Simpan Dompet (Hanya mengirimkan kolom standar yang valid)
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingAccount(true);
     try {
-      const payload = {
-        name: accountName,
-        type: accountType,
-        balance: Number(initialBalance),
-        initial_balance: Number(initialBalance),
-      };
-
-      const { error } = await supabase.from("accounts").insert([payload]);
+      const { error } = await supabase.from("accounts").insert([
+        {
+          name: accountName,
+          type: accountType,
+          balance: Number(initialBalance),
+        },
+      ]);
       if (error) throw error;
 
       setAccountName("");
       setInitialBalance("0");
       handleRefresh();
-      alert("Dompet/Rekening berhasil disimpan dan ditambahkan ke total saldo!");
+      alert("Dompet/Rekening berhasil disimpan!");
     } catch (err: any) {
       alert("Gagal menyimpan rekening: " + (err.message || JSON.stringify(err)));
     } finally {
@@ -352,15 +350,7 @@ export default function Page() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {accountsList.map((acc) => {
-                const bal = Number(
-                  acc.balance ??
-                  acc.initial_balance ??
-                  acc.amount ??
-                  acc.jumlah ??
-                  acc.saldo ??
-                  acc.value ??
-                  0
-                );
+                const bal = Number(acc.balance ?? acc.amount ?? acc.jumlah ?? acc.saldo ?? 0);
                 return (
                   <div key={acc.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50 space-y-1">
                     <div className="flex justify-between items-center">
